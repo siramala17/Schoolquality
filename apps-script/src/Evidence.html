@@ -1,0 +1,24 @@
+<section id="view-evidence" class="view">
+  <div class="toolbar">
+    <input type="text" id="evidenceSearch" placeholder="ค้นหาหลักฐาน...">
+    <button class="btn btn-primary" id="btnUploadEvidence">+ อัปโหลดหลักฐาน</button>
+  </div>
+  <div class="card">
+    <div class="grid-cards" id="evidenceGrid"></div>
+  </div>
+</section>
+
+<div class="modal" id="evidenceModal">
+  <div class="modal-box">
+    <h3>อัปโหลดหลักฐานการพัฒนา</h3>
+    <form id="evidenceForm">
+      <label>ไฟล์ (รูปภาพ, PDF, Word, PowerPoint)<input type="file" id="evidenceFile" required></label>
+      <label>คำอธิบาย<textarea id="evidenceDesc"></textarea></label>
+      <label>เกี่ยวข้องกับการนิเทศครั้งที่ (ถ้ามี)<select id="evidenceObsRef"><option value="">-- ไม่ระบุ --</option></select></label>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btnCancelEvidence">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary" id="btnSubmitEvidence">อัปโหลด</button>
+      </div>
+    </form>
+  </div>
+</div>

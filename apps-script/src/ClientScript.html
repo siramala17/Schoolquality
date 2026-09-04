@@ -1,0 +1,657 @@
+<script>
+/* ===================== Core helpers ===================== */
+function callServer(fnName) {
+  const args = Array.prototype.slice.call(arguments, 1);
+  return new Promise((resolve, reject) => {
+    let runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(err => reject(err));
+    runner[fnName].apply(runner, args);
+  });
+}
+
+function toast(msg, type) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' toast-' + type : '');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.classList.add('show'), 10);
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 3200);
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function fmtDate(d) {
+  if (!d) return '-';
+  const dt = new Date(d);
+  if (isNaN(dt)) return String(d);
+  return dt.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function fmtDateTime(d) {
+  if (!d) return '-';
+  const dt = new Date(d);
+  if (isNaN(dt)) return String(d);
+  return dt.toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function statusClass(status) {
+  if (status === 'เสร็จสิ้น') return 'status-done';
+  if (status === 'อยู่ระหว่างพัฒนา') return 'status-progress';
+  if (status === 'ยกเลิก') return 'status-cancelled';
+  return 'status-pending';
+}
+
+let LEVELS_CACHE = [];
+function levelColor(label) {
+  const lv = LEVELS_CACHE.find(l => l.label === label);
+  return lv ? lv.color : '#6b7280';
+}
+function levelBadge(label) {
+  return '<span class="badge" style="background:' + levelColor(label) + '">' + esc(label || '-') + '</span>';
+}
+
+/* ===================== App state ===================== */
+let RUBRIC_CACHE = [];
+let TEACHERS_CACHE = [];
+let PLANS_CACHE = [];
+let CHARTS = {};
+
+const NAV_CONFIG = [
+  { id: 'dashboard', label: 'Dashboard', icon: '📊', roles: ['ผู้ดูแลระบบ', 'ผู้บริหาร', 'ครู'] },
+  { id: 'plans', label: 'แผนการนิเทศ', icon: '🗓️', roles: ['ผู้ดูแลระบบ', 'ผู้บริหาร', 'ครู'] },
+  { id: 'observation', label: 'สังเกตการสอน', icon: '📝', roles: ['ผู้ดูแลระบบ', 'ผู้บริหาร'] },
+  { id: 'feedback', label: 'ติดตามผล', icon: '💬', roles: ['ผู้ดูแลระบบ', 'ผู้บริหาร', 'ครู'] },
+  { id: 'evidence', label: 'คลังหลักฐาน', icon: '📁', roles: ['ผู้ดูแลระบบ', 'ผู้บริหาร', 'ครู'] },
+  { id: 'reports', label: 'รายงาน', icon: '📄', roles: ['ผู้ดูแลระบบ', 'ผู้บริหาร'] },
+  { id: 'users', label: 'จัดการผู้ใช้', icon: '👤', roles: ['ผู้ดูแลระบบ'] }
+];
+
+function isSupervisor() { return CURRENT_USER.role === 'ผู้ดูแลระบบ' || CURRENT_USER.role === 'ผู้บริหาร'; }
+
+function buildNav() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = '';
+  NAV_CONFIG.filter(n => n.roles.indexOf(CURRENT_USER.role) > -1).forEach(n => {
+    const a = document.createElement('a');
+    a.href = '#' + n.id;
+    a.className = 'nav-item';
+    a.dataset.view = n.id;
+    a.innerHTML = '<span class="nav-icon">' + n.icon + '</span><span>' + n.label + '</span>';
+    a.onclick = (e) => { e.preventDefault(); showView(n.id); };
+    nav.appendChild(a);
+  });
+  document.getElementById('userCard').innerHTML =
+    '<div class="u-name">' + esc(CURRENT_USER.name) + '</div>' +
+    '<div class="u-role">' + esc(CURRENT_USER.role) + (CURRENT_USER.subjectGroup ? ' · ' + esc(CURRENT_USER.subjectGroup) : '') + '</div>';
+}
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const target = document.getElementById('view-' + id);
+  if (!target) return;
+  target.classList.add('active');
+  const navItem = document.querySelector('.nav-item[data-view="' + id + '"]');
+  if (navItem) navItem.classList.add('active');
+  const cfg = NAV_CONFIG.find(n => n.id === id);
+  document.getElementById('pageTitle').textContent = cfg ? cfg.label : id;
+  location.hash = id;
+  document.getElementById('sidebar').classList.remove('open');
+  if (LOADERS[id]) LOADERS[id]();
+}
+
+document.getElementById('menuBtn').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+/* ===================== DASHBOARD ===================== */
+async function loadDashboard() {
+  try {
+    const data = await callServer('apiGetDashboard');
+    document.getElementById('kpiTotalTeachers').textContent = data.kpi.totalTeachers;
+    document.getElementById('kpiTotalObs').textContent = data.kpi.totalObservations;
+    document.getElementById('kpiObserved').textContent = data.kpi.observedCount;
+    document.getElementById('kpiNotObserved').textContent = data.kpi.notObservedCount;
+    document.getElementById('kpiAvgScore').textContent = data.kpi.avgScore || '-';
+
+    const months = Object.keys(data.monthly).sort();
+    renderChart('chartMonthly', 'bar', months, [{ label: 'จำนวนครั้ง', data: months.map(m => data.monthly[m]), backgroundColor: '#4f46e5' }]);
+
+    const levelLabels = Object.keys(data.levelDist);
+    renderChart('chartLevel', 'doughnut', levelLabels, [{
+      data: levelLabels.map(l => data.levelDist[l]),
+      backgroundColor: levelLabels.map(l => levelColor(l))
+    }]);
+
+    const fuLabels = Object.keys(data.followUp);
+    renderChart('chartFollowup', 'bar', fuLabels, [{
+      label: 'จำนวน', data: fuLabels.map(l => data.followUp[l]),
+      backgroundColor: ['#ef6c00', '#1565c0', '#2e7d32']
+    }]);
+
+    const upcoming = document.getElementById('upcomingList');
+    upcoming.innerHTML = data.upcomingPlans.length ? data.upcomingPlans.map(p =>
+      '<div class="list-item"><div class="li-top"><span>' + esc(p.TeacherName) + '</span><span>' + fmtDate(p.Date) + '</span></div>' +
+      '<div class="li-sub">' + esc(p.Topic || p.SubjectGroup || '') + '</div></div>'
+    ).join('') : '<div class="empty-state">ไม่มีแผนนิเทศที่ใกล้ถึง</div>';
+  } catch (err) { toast(String(err), 'error'); }
+}
+
+function renderChart(canvasId, type, labels, datasets) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  if (CHARTS[canvasId]) CHARTS[canvasId].destroy();
+  CHARTS[canvasId] = new Chart(ctx, {
+    type: type,
+    data: { labels: labels, datasets: datasets },
+    options: { responsive: true, plugins: { legend: { display: type === 'doughnut' } } }
+  });
+}
+
+/* ===================== PLANS ===================== */
+async function loadPlans() {
+  try {
+    await ensureTeachers();
+    const plans = await callServer('apiGetPlans');
+    PLANS_CACHE = plans;
+    const tbody = document.getElementById('plansTbody');
+    tbody.innerHTML = plans.length ? plans.map(p => renderPlanRow(p)).join('') :
+      '<tr><td colspan="7" class="empty-state">ยังไม่มีแผนการนิเทศ</td></tr>';
+  } catch (err) { toast(String(err), 'error'); }
+}
+
+function renderPlanRow(p) {
+  const canManage = isSupervisor();
+  return '<tr>' +
+    '<td>' + fmtDate(p.Date) + (p.Time ? ' ' + p.Time : '') + '</td>' +
+    '<td>' + esc(p.TeacherName) + '</td>' +
+    '<td>' + esc(p.SubjectGroup || '-') + '</td>' +
+    '<td>' + esc(p.Topic || '-') + '</td>' +
+    '<td>' + esc(p.SupervisorName) + '</td>' +
+    '<td><span class="status-pill ' + statusClass(p.Status) + '">' + esc(p.Status) + '</span></td>' +
+    '<td>' + (canManage ? planActionsHtml(p) : '') + '</td>' +
+  '</tr>';
+}
+
+function planActionsHtml(p) {
+  if (p.Status !== 'กำหนดการ') return '';
+  return '<button class="btn" onclick="cancelPlan(\'' + p.PlanID + '\')">ยกเลิก</button>';
+}
+
+async function cancelPlan(planId) {
+  if (!confirm('ยกเลิกแผนการนิเทศนี้?')) return;
+  try {
+    await callServer('apiUpdatePlanStatus', planId, 'ยกเลิก');
+    toast('ยกเลิกแผนแล้ว', 'success');
+    loadPlans();
+  } catch (err) { toast(String(err), 'error'); }
+}
+
+document.getElementById('btnNewPlan').addEventListener('click', async () => {
+  await ensureTeachers();
+  document.getElementById('planForm').reset();
+  document.getElementById('planYear').value = new Date().getFullYear() + 543;
+  openModal('planModal');
+});
+document.getElementById('btnCancelPlan').addEventListener('click', () => closeModal('planModal'));
+
+document.getElementById('planForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await callServer('apiCreatePlan', {
+      semester: document.getElementById('planSemester').value,
+      academicYear: document.getElementById('planYear').value,
+      date: document.getElementById('planDate').value,
+      time: document.getElementById('planTime').value,
+      teacherEmail: document.getElementById('planTeacher').value,
+      subjectGroup: document.getElementById('planSubjectGroup').value,
+      topic: document.getElementById('planTopic').value
+    });
+    toast('สร้างแผนการนิเทศเรียบร้อย', 'success');
+    closeModal('planModal');
+    loadPlans();
+  } catch (err) { toast(String(err), 'error'); }
+});
+
+/* ===================== OBSERVATION ===================== */
+async function loadObservationForm() {
+  try {
+    await ensureTeachers();
+    await ensureRubric();
+    populateSelect('obsTeacher', TEACHERS_CACHE.map(t => ({ value: t.email, label: t.name })), 'เลือกครู');
+    const plans = await callServer('apiGetPlans');
+    const pending = plans.filter(p => p.Status === 'กำหนดการ');
+    populateSelect('obsPlanRef', pending.map(p => ({ value: p.PlanID, label: p.TeacherName + ' - ' + fmtDate(p.Date) + (p.Topic ? ' - ' + p.Topic : '') })), '-- ไม่อ้างอิง --');
+    renderRubricForm();
+    document.getElementById('obsForm').reset();
+    document.getElementById('obsDate').value = new Date().toISOString().slice(0, 10);
+  } catch (err) { toast(String(err), 'error'); }
+}
+
+document.getElementById('obsPlanRef').addEventListener('change', async (e) => {
+  const planId = e.target.value;
+  if (!planId) return;
+  const plans = await callServer('apiGetPlans');
+  const plan = plans.find(p => p.PlanID === planId);
+  if (plan) {
+    document.getElementById('obsTeacher').value = plan.TeacherEmail;
+    document.getElementById('obsSubjectGroup').value = plan.SubjectGroup || '';
+    document.getElementById('obsDate').value = plan.Date ? new Date(plan.Date).toISOString().slice(0, 10) : '';
+  }
+});
+
+function renderRubricForm() {
+  const c = document.getElementById('rubricContainer');
+  c.innerHTML = RUBRIC_CACHE.map(domain =>
+    '<div class="rubric-domain" data-domain="' + domain.key + '">' +
+      '<h4>' + esc(domain.name) + '</h4>' +
+      domain.items.map((item, idx) =>
+        '<div class="rubric-item">' +
+          '<div class="rubric-item-label">' + esc(item) + '</div>' +
+          '<div class="rate" data-domain="' + domain.key + '" data-idx="' + idx + '">' +
+            [1,2,3,4,5].map(v => '<button type="button" data-val="' + v + '">' + v + '</button>').join('') +
+          '</div>' +
+        '</div>'
+      ).join('') +
+    '</div>'
+  ).join('');
+
+  c.querySelectorAll('.rate button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const group = btn.parentElement;
+      group.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      updateScoreSummary();
+    });
+  });
+}
+
+function getSelectedScores() {
+  const scores = {};
+  let complete = true;
+  RUBRIC_CACHE.forEach(domain => {
+    scores[domain.key] = [];
+    domain.items.forEach((_, idx) => {
+      const group = document.querySelector('.rate[data-domain="' + domain.key + '"][data-idx="' + idx + '"]');
+      const sel = group ? group.querySelector('button.selected') : null;
+      const val = sel ? Number(sel.dataset.val) : 0;
+      if (!val) complete = false;
+      scores[domain.key].push(val);
+    });
+  });
+  return { scores, complete };
+}
+
+function updateScoreSummary() {
+  const { scores } = getSelectedScores();
+  let total = 0, count = 0;
+  const parts = RUBRIC_CACHE.map(domain => {
+    const vals = scores[domain.key].filter(v => v > 0);
+    if (!vals.length) return '<div class="ss-item">' + esc(domain.name) + '<b>-</b></div>';
+    const avg = vals.reduce((a, b) => a + b, 0) / domain.items.length;
+    total += avg; count++;
+    return '<div class="ss-item">' + esc(domain.name) + '<b>' + avg.toFixed(2) + '</b></div>';
+  });
+  const overall = count === RUBRIC_CACHE.length ? (total / count) : null;
+  let overallHtml = '<div class="ss-item">คะแนนรวม<b>' + (overall !== null ? overall.toFixed(2) : '-') + '</b></div>';
+  document.getElementById('scoreSummary').innerHTML = parts.join('') + overallHtml;
+}
+
+document.getElementById('obsForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const { scores, complete } = getSelectedScores();
+  if (!complete) { toast('กรุณาให้คะแนนครบทุกรายการ', 'error'); return; }
+  if (!document.getElementById('obsTeacher').value) { toast('กรุณาเลือกครูผู้รับการสังเกต', 'error'); return; }
+  try {
+    await callServer('apiSubmitObservation', {
+      planId: document.getElementById('obsPlanRef').value,
+      teacherEmail: document.getElementById('obsTeacher').value,
+      date: document.getElementById('obsDate').value,
+      subject: document.getElementById('obsSubject').value,
+      classRoom: document.getElementById('obsClassRoom').value,
+      subjectGroup: document.getElementById('obsSubjectGroup').value,
+      scores: scores,
+      feedback: {
+        strengths: document.getElementById('fbStrengths').value,
+        improvements: document.getElementById('fbImprovements').value,
+        suggestions: document.getElementById('fbSuggestions').value
+      }
+    });
+    toast('บันทึกผลการสังเกตการสอนเรียบร้อย', 'success');
+    loadObservationForm();
+  } catch (err) { toast(String(err), 'error'); }
+});
+
+/* ===================== FEEDBACK / ติดตามผล ===================== */
+async function loadFeedback() {
+  try {
+    const obs = await callServer('apiGetObservations', {});
+    const list = document.getElementById('feedbackList');
+    list.innerHTML = obs.length ? obs.map(o =>
+      '<div class="list-item" data-id="' + o.ObsID + '" onclick="selectFeedback(\'' + o.ObsID + '\')">' +
+        '<div class="li-top"><span>' + esc(o.TeacherName) + '</span>' + levelBadge(o.Level) + '</div>' +
+        '<div class="li-sub">' + fmtDate(o.Date) + ' · ' + esc(o.Subject || o.SubjectGroup || '') + '</div>' +
+      '</div>'
+    ).join('') : '<div class="empty-state">ยังไม่มีข้อมูลการนิเทศ</div>';
+    if (obs.length) selectFeedback(obs[0].ObsID);
+    else document.getElementById('feedbackDetail').innerHTML = '<div class="empty-state">ยังไม่มีข้อมูล</div>';
+  } catch (err) { toast(String(err), 'error'); }
+}
+
+async function selectFeedback(obsId) {
+  document.querySelectorAll('#feedbackList .list-item').forEach(el => el.classList.toggle('active', el.dataset.id === obsId));
+  try {
+    const detail = await callServer('apiGetObservationDetail', obsId);
+    const o = detail.observation, fb = detail.feedback;
+    const canManage = isSupervisor();
+    let html = '<h3>' + esc(o.TeacherName) + ' — ' + fmtDate(o.Date) + '</h3>';
+    html += '<div class="score-summary">';
+    RUBRIC_CACHE.forEach(d => {
+      html += '<div class="ss-item">' + esc(d.name) + '<b>' + (o.DomainScores[d.key] != null ? o.DomainScores[d.key] : '-') + '</b></div>';
+    });
+    html += '<div class="ss-item">คะแนนรวม<b>' + o.OverallScore + '</b></div>';
+    html += '<div class="ss-item">ระดับคุณภาพ<b>' + levelBadge(o.Level) + '</b></div>';
+    html += '</div>';
+
+    html += '<div class="card sub-card">';
+    html += '<h4>จุดเด่น</h4><p>' + esc(fb ? fb.Strengths : '') + '</p>';
+    html += '<h4>สิ่งที่ควรพัฒนา</h4><p>' + esc(fb ? fb.Improvements : '') + '</p>';
+    html += '<h4>ข้อเสนอแนะ</h4><p>' + esc(fb ? fb.Suggestions : '') + '</p>';
+    html += '</div>';
+
+    if (fb) {
+      html += '<div class="card sub-card">';
+      html += '<h4>การตอบกลับ/ความก้าวหน้าของครู <span class="status-pill ' + statusClass(fb.Status) + '">' + esc(fb.Status) + '</span></h4>';
+      if (!canManage) {
+        html += '<form id="teacherRespForm">' +
+          '<label>บันทึกความก้าวหน้า / สิ่งที่ได้พัฒนา<textarea id="teacherRespText">' + esc(fb.TeacherResponse) + '</textarea></label>' +
+          '<label>สถานะ<select id="teacherRespStatus">' +
+            ['รอติดตาม','อยู่ระหว่างพัฒนา','เสร็จสิ้น'].map(s => '<option value="' + s + '"' + (s === fb.Status ? ' selected' : '') + '>' + s + '</option>').join('') +
+          '</select></label>' +
+          '<button type="submit" class="btn btn-primary">บันทึก</button>' +
+        '</form>';
+      } else {
+        html += '<p>' + esc(fb.TeacherResponse || 'ยังไม่มีการตอบกลับจากครู') + '</p>';
+      }
+      html += '</div>';
+    }
+
+    if (detail.evidence.length) {
+      html += '<div class="card sub-card"><h4>หลักฐานที่เกี่ยวข้อง</h4><div class="grid-cards">';
+      detail.evidence.forEach(ev => { html += evidenceCardHtml(ev, false); });
+      html += '</div></div>';
+    }
+
+    document.getElementById('feedbackDetail').innerHTML = html;
+
+    const respForm = document.getElementById('teacherRespForm');
+    if (respForm) {
+      respForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          await callServer('apiUpdateTeacherResponse', fb.FeedbackID,
+            document.getElementById('teacherRespText').value,
+            document.getElementById('teacherRespStatus').value);
+          toast('บันทึกความก้าวหน้าเรียบร้อย', 'success');
+          selectFeedback(obsId);
+        } catch (err) { toast(String(err), 'error'); }
+      });
+    }
+  } catch (err) { toast(String(err), 'error'); }
+}
+
+/* ===================== EVIDENCE / คลังหลักฐาน ===================== */
+function evidenceCardHtml(ev, showDelete) {
+  const icon = ev.FileType && ev.FileType.indexOf('image') > -1 ? '🖼️' :
+    ev.FileType && ev.FileType.indexOf('pdf') > -1 ? '📕' :
+    ev.FileType && ev.FileType.indexOf('word') > -1 ? '📘' :
+    ev.FileType && ev.FileType.indexOf('presentation') > -1 ? '📙' : '📄';
+  return '<div class="evd-card">' +
+    '<div class="evd-icon">' + icon + '</div>' +
+    '<div class="evd-name">' + esc(ev.FileName) + '</div>' +
+    '<div class="evd-meta">' + esc(ev.UploaderName) + ' · ' + fmtDate(ev.UploadedAt) + '</div>' +
+    '<div class="evd-actions">' +
+      '<a class="btn" href="' + ev.FileURL + '" target="_blank">เปิดไฟล์</a>' +
+      (showDelete ? '<button class="btn btn-danger" onclick="deleteEvidence(\'' + ev.EvidenceID + '\')">ลบ</button>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+async function loadEvidence() {
+  try {
+    const list = await callServer('apiGetEvidenceList', {});
+    renderEvidenceGrid(list);
+    const obs = await callServer('apiGetObservations', {});
+    populateSelect('evidenceObsRef', obs.map(o => ({ value: o.ObsID, label: esc(o.TeacherName) + ' - ' + fmtDate(o.Date) })), '-- ไม่ระบุ --');
+  } catch (err) { toast(String(err), 'error'); }
+}
+
+function renderEvidenceGrid(list) {
+  const grid = document.getElementById('evidenceGrid');
+  grid.innerHTML = list.length ? list.map(ev => evidenceCardHtml(ev, true)).join('') : '<div class="empty-state">ยังไม่มีหลักฐาน</div>';
+}
+
+let evidenceSearchTimer;
+document.getElementById('evidenceSearch').addEventListener('input', (e) => {
+  clearTimeout(evidenceSearchTimer);
+  const kw = e.target.value;
+  evidenceSearchTimer = setTimeout(async () => {
+    const list = await callServer('apiGetEvidenceList', { keyword: kw });
+    renderEvidenceGrid(list);
+  }, 250);
+});
+
+async function deleteEvidence(id) {
+  if (!confirm('ลบหลักฐานนี้?')) return;
+  try {
+    await callServer('apiDeleteEvidence', id);
+    toast('ลบหลักฐานแล้ว', 'success');
+    loadEvidence();
+  } catch (err) { toast(String(err), 'error'); }
+}
+
+document.getElementById('btnUploadEvidence').addEventListener('click', () => {
+  document.getElementById('evidenceForm').reset();
+  openModal('evidenceModal');
+});
+document.getElementById('btnCancelEvidence').addEventListener('click', () => closeModal('evidenceModal'));
+
+document.getElementById('evidenceForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const fileInput = document.getElementById('evidenceFile');
+  const file = fileInput.files[0];
+  if (!file) { toast('กรุณาเลือกไฟล์', 'error'); return; }
+  const btn = document.getElementById('btnSubmitEvidence');
+  btn.disabled = true; btn.textContent = 'กำลังอัปโหลด...';
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      await callServer('apiUploadEvidence', {
+        base64: reader.result,
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        relatedObsId: document.getElementById('evidenceObsRef').value,
+        description: document.getElementById('evidenceDesc').value
+      });
+      toast('อัปโหลดหลักฐานเรียบร้อย', 'success');
+      closeModal('evidenceModal');
+      loadEvidence();
+    } catch (err) { toast(String(err), 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'อัปโหลด'; }
+  };
+  reader.readAsDataURL(file);
+});
+
+/* ===================== REPORTS ===================== */
+async function loadReports() {
+  try {
+    await ensureTeachers();
+    const groups = await callServer('apiGetSubjectGroups');
+    populateSelect('repTeacher', TEACHERS_CACHE.map(t => ({ value: t.email, label: t.name })), 'ทั้งหมด');
+    populateSelect('repSubjectGroup', groups.map(g => ({ value: g, label: g })), 'ทั้งหมด');
+    document.getElementById('reportResult').innerHTML = '';
+  } catch (err) { toast(String(err), 'error'); }
+}
+
+function currentReportFilters() {
+  return {
+    teacherEmail: document.getElementById('repTeacher').value,
+    subjectGroup: document.getElementById('repSubjectGroup').value,
+    dateFrom: document.getElementById('repFrom').value,
+    dateTo: document.getElementById('repTo').value
+  };
+}
+
+document.getElementById('btnGenReport').addEventListener('click', async () => {
+  try {
+    const report = await callServer('apiGenerateReport', currentReportFilters());
+    renderReport(report);
+  } catch (err) { toast(String(err), 'error'); }
+});
+
+function renderReport(report) {
+  const teachers = Object.keys(report.byTeacher);
+  let html = '<h3>สรุปผลการนิเทศ (' + report.totalObservations + ' ครั้ง)</h3>';
+  if (!teachers.length) {
+    html += '<div class="empty-state">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</div>';
+  } else {
+    html += '<table class="table"><thead><tr><th>ครู</th><th>กลุ่มสาระ</th><th>จำนวนครั้ง</th><th>คะแนนเฉลี่ย</th></tr></thead><tbody>';
+    teachers.forEach(email => {
+      const t = report.byTeacher[email];
+      html += '<tr><td>' + esc(t.name) + '</td><td>' + esc(t.subjectGroup || '-') + '</td><td>' + t.count + '</td><td>' + t.avgScore + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  document.getElementById('reportResult').innerHTML = html;
+}
+
+document.getElementById('btnExportCsv').addEventListener('click', async () => {
+  try {
+    const res = await callServer('apiExportReportCsv', currentReportFilters());
+    toast('สร้างไฟล์ Excel แล้ว', 'success');
+    window.open(res.url, '_blank');
+  } catch (err) { toast(String(err), 'error'); }
+});
+
+document.getElementById('btnExportPdf').addEventListener('click', async () => {
+  try {
+    const report = await callServer('apiGenerateReport', currentReportFilters());
+    let html = '<html><head><meta charset="utf-8"><style>body{font-family:sans-serif}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px;font-size:12px}</style></head><body>';
+    html += '<h2>รายงานผลการนิเทศ</h2><p>สร้างเมื่อ ' + fmtDateTime(new Date()) + '</p>';
+    html += '<table><tr><th>ครู</th><th>กลุ่มสาระ</th><th>จำนวนครั้ง</th><th>คะแนนเฉลี่ย</th></tr>';
+    Object.keys(report.byTeacher).forEach(email => {
+      const t = report.byTeacher[email];
+      html += '<tr><td>' + t.name + '</td><td>' + (t.subjectGroup || '-') + '</td><td>' + t.count + '</td><td>' + t.avgScore + '</td></tr>';
+    });
+    html += '</table></body></html>';
+    const res = await callServer('apiExportReportPdf', html);
+    toast('สร้างไฟล์ PDF แล้ว', 'success');
+    window.open(res.url, '_blank');
+  } catch (err) { toast(String(err), 'error'); }
+});
+
+/* ===================== USERS (Admin) ===================== */
+let EDITING_USER_EMAIL = null;
+
+async function loadUsers() {
+  try {
+    const roles = await callServer('apiGetRoles');
+    populateSelect('userRole', Object.values(roles).map(r => ({ value: r, label: r })), null);
+    const users = await callServer('apiGetAllUsers');
+    const tbody = document.getElementById('usersTbody');
+    tbody.innerHTML = users.map(u =>
+      '<tr>' +
+        '<td>' + esc(u.Email) + '</td>' +
+        '<td>' + esc(u.Name) + '</td>' +
+        '<td>' + esc(u.Role) + '</td>' +
+        '<td>' + esc(u.SubjectGroup || '-') + '</td>' +
+        '<td>' + (u.Active === false ? 'ปิดใช้งาน' : 'ใช้งาน') + '</td>' +
+        '<td><button class="btn" onclick="editUser(\'' + esc(u.Email) + '\')">แก้ไข</button></td>' +
+      '</tr>'
+    ).join('');
+    tbody.dataset.cache = JSON.stringify(users);
+  } catch (err) { toast(String(err), 'error'); }
+}
+
+function editUser(email) {
+  const users = JSON.parse(document.getElementById('usersTbody').dataset.cache || '[]');
+  const u = users.find(x => x.Email === email);
+  EDITING_USER_EMAIL = email;
+  document.getElementById('userModalTitle').textContent = 'แก้ไขผู้ใช้';
+  document.getElementById('userEmail').value = u.Email;
+  document.getElementById('userEmail').disabled = true;
+  document.getElementById('userName').value = u.Name;
+  document.getElementById('userRole').value = u.Role;
+  document.getElementById('userSubjectGroup').value = u.SubjectGroup || '';
+  document.getElementById('userPosition').value = u.Position || '';
+  document.getElementById('userActive').checked = u.Active !== false;
+  openModal('userModal');
+}
+
+document.getElementById('btnNewUser').addEventListener('click', () => {
+  EDITING_USER_EMAIL = null;
+  document.getElementById('userForm').reset();
+  document.getElementById('userModalTitle').textContent = 'เพิ่มผู้ใช้';
+  document.getElementById('userEmail').disabled = false;
+  openModal('userModal');
+});
+document.getElementById('btnCancelUser').addEventListener('click', () => closeModal('userModal'));
+
+document.getElementById('userForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await callServer('apiUpsertUser', {
+      email: document.getElementById('userEmail').value,
+      name: document.getElementById('userName').value,
+      role: document.getElementById('userRole').value,
+      subjectGroup: document.getElementById('userSubjectGroup').value,
+      position: document.getElementById('userPosition').value,
+      active: document.getElementById('userActive').checked
+    });
+    toast('บันทึกผู้ใช้เรียบร้อย', 'success');
+    closeModal('userModal');
+    loadUsers();
+  } catch (err) { toast(String(err), 'error'); }
+});
+
+/* ===================== Shared utils ===================== */
+function populateSelect(id, items, placeholderLabel) {
+  const sel = document.getElementById(id);
+  const current = sel.value;
+  sel.innerHTML = (placeholderLabel !== null ? '<option value="">' + placeholderLabel + '</option>' : '') +
+    items.map(it => '<option value="' + esc(it.value) + '">' + esc(it.label) + '</option>').join('');
+  if (current) sel.value = current;
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function ensureTeachers() {
+  if (!TEACHERS_CACHE.length) TEACHERS_CACHE = await callServer('apiGetTeachers');
+}
+async function ensureRubric() {
+  if (!RUBRIC_CACHE.length) RUBRIC_CACHE = await callServer('apiGetRubric');
+}
+
+const LOADERS = {
+  dashboard: loadDashboard,
+  plans: loadPlans,
+  observation: loadObservationForm,
+  feedback: loadFeedback,
+  evidence: loadEvidence,
+  reports: loadReports,
+  users: loadUsers
+};
+
+/* ===================== Init ===================== */
+(async function init() {
+  buildNav();
+  try {
+    LEVELS_CACHE = await callServer('apiGetLevels');
+  } catch (err) { /* ignore, badges fall back to gray */ }
+  const initial = (location.hash || '#dashboard').replace('#', '');
+  const allowed = NAV_CONFIG.some(n => n.id === initial && n.roles.indexOf(CURRENT_USER.role) > -1);
+  showView(allowed ? initial : 'dashboard');
+})();
+</script>

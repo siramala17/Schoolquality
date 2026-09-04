@@ -1,0 +1,29 @@
+<section id="view-dashboard" class="view">
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-label">ครูทั้งหมด</div><div class="kpi-value" id="kpiTotalTeachers">-</div></div>
+    <div class="kpi-card"><div class="kpi-label">จำนวนครั้งที่นิเทศ</div><div class="kpi-value" id="kpiTotalObs">-</div></div>
+    <div class="kpi-card kpi-good"><div class="kpi-label">นิเทศแล้ว</div><div class="kpi-value" id="kpiObserved">-</div></div>
+    <div class="kpi-card kpi-warn"><div class="kpi-label">ยังไม่ได้นิเทศ</div><div class="kpi-value" id="kpiNotObserved">-</div></div>
+    <div class="kpi-card"><div class="kpi-label">คะแนนเฉลี่ยการสอน</div><div class="kpi-value" id="kpiAvgScore">-</div></div>
+  </div>
+  <div class="card-grid-2">
+    <div class="card">
+      <h3>การนิเทศรายเดือน</h3>
+      <canvas id="chartMonthly" height="220"></canvas>
+    </div>
+    <div class="card">
+      <h3>ระดับคุณภาพการสอน</h3>
+      <canvas id="chartLevel" height="220"></canvas>
+    </div>
+  </div>
+  <div class="card-grid-2">
+    <div class="card">
+      <h3>สถานะการติดตามผล</h3>
+      <canvas id="chartFollowup" height="200"></canvas>
+    </div>
+    <div class="card">
+      <h3>แผนนิเทศที่ใกล้ถึง</h3>
+      <div id="upcomingList" class="list"></div>
+    </div>
+  </div>
+</section>

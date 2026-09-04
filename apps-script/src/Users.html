@@ -1,0 +1,31 @@
+<section id="view-users" class="view">
+  <div class="toolbar">
+    <button class="btn btn-primary" id="btnNewUser">+ เพิ่ม / แก้ไขผู้ใช้</button>
+  </div>
+  <div class="card">
+    <table class="table">
+      <thead><tr><th>อีเมล</th><th>ชื่อ</th><th>บทบาท</th><th>กลุ่มสาระ</th><th>สถานะ</th><th></th></tr></thead>
+      <tbody id="usersTbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<div class="modal" id="userModal">
+  <div class="modal-box">
+    <h3 id="userModalTitle">เพิ่มผู้ใช้</h3>
+    <form id="userForm">
+      <label>อีเมล<input type="email" id="userEmail" required></label>
+      <label>ชื่อ<input type="text" id="userName" required></label>
+      <label>บทบาท<select id="userRole"></select></label>
+      <label>กลุ่มสาระ<input type="text" id="userSubjectGroup"></label>
+      <label>ตำแหน่ง<input type="text" id="userPosition"></label>
+      <label style="flex-direction:row; align-items:center; gap:8px;">
+        <input type="checkbox" id="userActive" checked style="width:auto;"> ใช้งาน
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btnCancelUser">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary">บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>

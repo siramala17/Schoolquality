@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  ADMIN
+  EXECUTIVE
+  TEACHER
+}
+
+enum PlanStatus {
+  SCHEDULED
+  DONE
+  CANCELLED
+}
+
+enum FeedbackStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  role         Role     @default(TEACHER)
+  subjectGroup String?
+  position     String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  plansAsTeacher       Plan[]        @relation("PlanTeacher")
+  plansAsSupervisor    Plan[]        @relation("PlanSupervisor")
+  obsAsTeacher         Observation[] @relation("ObsTeacher")
+  obsAsSupervisor      Observation[] @relation("ObsSupervisor")
+  evidence             Evidence[]
+}
+
+model Plan {
+  id           String     @id @default(cuid())
+  semester     String
+  academicYear String
+  date         DateTime
+  time         String?
+  subjectGroup String?
+  topic        String?
+  status       PlanStatus @default(SCHEDULED)
+  createdAt    DateTime   @default(now())
+
+  supervisorId String
+  supervisor   User @relation("PlanSupervisor", fields: [supervisorId], references: [id])
+  teacherId    String
+  teacher      User @relation("PlanTeacher", fields: [teacherId], references: [id])
+
+  observation  Observation?
+}
+
+model Observation {
+  id               String   @id @default(cuid())
+  date             DateTime
+  subjectGroup     String?
+  classRoom        String?
+  subject          String?
+  scoresJson       String
+  domainScoresJson String
+  overallScore     Float
+  level            String
+  createdAt        DateTime @default(now())
+
+  planId       String? @unique
+  plan         Plan?   @relation(fields: [planId], references: [id])
+  supervisorId String
+  supervisor   User    @relation("ObsSupervisor", fields: [supervisorId], references: [id])
+  teacherId    String
+  teacher      User    @relation("ObsTeacher", fields: [teacherId], references: [id])
+
+  feedback  Feedback?
+  evidence  Evidence[]
+}
+
+model Feedback {
+  id              String         @id @default(cuid())
+  strengths       String?
+  improvements    String?
+  suggestions     String?
+  teacherResponse String?
+  status          FeedbackStatus @default(PENDING)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  observationId String      @unique
+  observation   Observation @relation(fields: [observationId], references: [id])
+}
+
+model Evidence {
+  id          String   @id @default(cuid())
+  fileName    String
+  fileType    String
+  fileData    Bytes
+  description String?
+  uploadedAt  DateTime @default(now())
+
+  uploaderId    String
+  uploader      User         @relation(fields: [uploaderId], references: [id])
+  observationId String?
+  observation   Observation? @relation(fields: [observationId], references: [id])
+}

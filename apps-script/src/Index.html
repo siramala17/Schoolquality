@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-icon">🎯</div>
+        <div>
+          <div class="brand-title">SMART SUPERVISION</div>
+          <div class="brand-sub">360°</div>
+        </div>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="user-card" id="userCard"></div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <button class="menu-btn" id="menuBtn">☰</button>
+        <div class="topbar-title" id="pageTitle">Dashboard</div>
+      </header>
+      <div class="content" id="content">
+
+        <?!= include('Dashboard'); ?>
+        <?!= include('Plans'); ?>
+        <?!= include('Observation'); ?>
+        <?!= include('Feedback'); ?>
+        <?!= include('Evidence'); ?>
+        <?!= include('Reports'); ?>
+        <?!= include('Users'); ?>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const CURRENT_USER = <?!= JSON.stringify(userInfo) ?>;
+  </script>
+  <?!= include('ClientScript'); ?>
+</body>
+</html>

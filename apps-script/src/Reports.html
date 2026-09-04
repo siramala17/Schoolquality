@@ -1,0 +1,20 @@
+<section id="view-reports" class="view">
+  <div class="card">
+    <h3>สร้างรายงาน</h3>
+    <div class="form-row-3">
+      <label>ครู<select id="repTeacher"><option value="">ทั้งหมด</option></select></label>
+      <label>กลุ่มสาระ<select id="repSubjectGroup"><option value="">ทั้งหมด</option></select></label>
+      <label>ตั้งแต่วันที่<input type="date" id="repFrom"></label>
+    </div>
+    <div class="form-row-3">
+      <label>ถึงวันที่<input type="date" id="repTo"></label>
+      <div></div><div></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btnGenReport">สร้างรายงาน</button>
+      <button class="btn" id="btnExportCsv">ส่งออก Excel (CSV)</button>
+      <button class="btn" id="btnExportPdf">ส่งออก PDF</button>
+    </div>
+  </div>
+  <div class="card" id="reportResult"></div>
+</section>

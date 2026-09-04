@@ -1,0 +1,36 @@
+<section id="view-plans" class="view">
+  <div class="toolbar">
+    <button class="btn btn-primary" id="btnNewPlan">+ สร้างแผนการนิเทศ</button>
+  </div>
+  <div class="card">
+    <table class="table">
+      <thead><tr><th>วันที่</th><th>ครู</th><th>กลุ่มสาระ</th><th>หัวข้อ</th><th>ผู้นิเทศ</th><th>สถานะ</th><th></th></tr></thead>
+      <tbody id="plansTbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<div class="modal" id="planModal">
+  <div class="modal-box">
+    <h3>สร้างแผนการนิเทศ</h3>
+    <form id="planForm">
+      <div class="form-row-3">
+        <label>ภาคเรียน
+          <select id="planSemester"><option value="1">1</option><option value="2">2</option></select>
+        </label>
+        <label>ปีการศึกษา<input type="number" id="planYear" required></label>
+        <label>วันที่<input type="date" id="planDate" required></label>
+      </div>
+      <div class="form-row-3">
+        <label>เวลา<input type="time" id="planTime"></label>
+        <label>ครูผู้รับการนิเทศ<select id="planTeacher" required></select></label>
+        <label>กลุ่มสาระ<input type="text" id="planSubjectGroup"></label>
+      </div>
+      <label>หัวข้อ/รายละเอียด<textarea id="planTopic"></textarea></label>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="btnCancelPlan">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary">บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,30 @@
+<section id="view-observation" class="view">
+  <div class="card">
+    <h3>แบบสังเกตการสอนออนไลน์</h3>
+    <form id="obsForm">
+      <div class="form-row-3">
+        <label>อ้างอิงแผนนิเทศ (ถ้ามี)<select id="obsPlanRef"><option value="">-- ไม่อ้างอิง --</option></select></label>
+        <label>ครูผู้รับการสังเกต<select id="obsTeacher" required></select></label>
+        <label>วันที่<input type="date" id="obsDate" required></label>
+      </div>
+      <div class="form-row-3">
+        <label>วิชา<input type="text" id="obsSubject"></label>
+        <label>ห้องเรียน<input type="text" id="obsClassRoom"></label>
+        <label>กลุ่มสาระ<input type="text" id="obsSubjectGroup"></label>
+      </div>
+
+      <div id="rubricContainer"></div>
+
+      <div class="score-summary" id="scoreSummary"></div>
+
+      <div class="card sub-card">
+        <h4>ข้อเสนอแนะและติดตามผล</h4>
+        <label>จุดเด่น<textarea id="fbStrengths"></textarea></label>
+        <label>สิ่งที่ควรพัฒนา<textarea id="fbImprovements"></textarea></label>
+        <label>ข้อเสนอแนะ<textarea id="fbSuggestions"></textarea></label>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg">บันทึกผลการสังเกตการสอน</button>
+    </form>
+  </div>
+</section>
