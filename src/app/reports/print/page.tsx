@@ -4,6 +4,8 @@ import { generateReport } from "@/lib/data/reports";
 import { fmtDateTimeTH } from "@/lib/date";
 import PrintTrigger from "@/components/reports/PrintTrigger";
 
+export const dynamic = "force-dynamic";
+
 type SP = Record<string, string | undefined>;
 
 export default async function ReportPrintPage({ searchParams }: { searchParams: Promise<SP> }) {

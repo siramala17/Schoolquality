@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 
 // Proxy always runs on the Node.js runtime (unlike the old "middleware"
 // convention, which defaulted to Edge) — that's what lets `auth`'s
-// jwt/session callbacks hit Prisma via the better-sqlite3 driver adapter.
+// jwt/session callbacks hit Prisma via the pg driver adapter.
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const path = req.nextUrl.pathname;
