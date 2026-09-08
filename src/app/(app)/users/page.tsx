@@ -31,15 +31,10 @@ export default async function UsersPage() {
         columns={[
           { key: "name", header: "ชื่อ-นามสกุล" },
           { key: "email", header: "อีเมล", className: "text-text-muted" },
-          { key: "role", header: "บทบาท", render: (r) => ROLE_LABELS[r.role] },
-          { key: "position", header: "ตำแหน่ง", render: (r) => r.position || "-" },
-          { key: "subjectGroupName", header: "กลุ่มสาระ", render: (r) => r.subjectGroupName || "-" },
-          {
-            key: "active",
-            header: "สถานะ",
-            render: (r) =>
-              r.active ? <span className="text-good">ใช้งาน</span> : <span className="text-text-muted">ปิด</span>,
-          },
+          { key: "role", header: "บทบาท", map: ROLE_LABELS },
+          { key: "position", header: "ตำแหน่ง" },
+          { key: "subjectGroupName", header: "กลุ่มสาระ" },
+          { key: "active", header: "สถานะ", cell: "bool" },
         ]}
         fields={[
           { name: "name", label: "ชื่อ-นามสกุล", required: true },

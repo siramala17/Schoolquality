@@ -52,7 +52,7 @@ export async function getDashboardData(filters: DashFilters) {
       for (const d of a.form.domains) {
         const da = s.perDomain[d.id]?.avg;
         if (da != null) {
-          const key = d.name;
+          const key = d.name.split(":")[0].trim();
           const arr = perDomainScores.get(key) ?? [];
           arr.push(da);
           perDomainScores.set(key, arr);
@@ -105,7 +105,7 @@ export async function getTeacherRoundBreakdown(teacherId: string, levels: Qualit
         submitted: s.progress.submitted,
         total: s.progress.total,
         domains: a.form.domains.map((d) => ({
-          name: d.name,
+          name: d.name.split(":")[0].trim(),
           avg: s.perDomain[d.id]?.avg == null ? null : round2(s.perDomain[d.id]!.avg!),
         })),
       };

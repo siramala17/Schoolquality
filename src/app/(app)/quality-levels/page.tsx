@@ -1,6 +1,6 @@
 import { getQualityLevels } from "@/lib/data/lookups";
 import { requireRole } from "@/lib/auth-helpers";
-import { SectionTitle, LevelBadge } from "@/components/ui";
+import { SectionTitle } from "@/components/ui";
 import CrudManager from "@/components/crud/CrudManager";
 import { createQualityLevel, updateQualityLevel, deleteQualityLevel } from "@/lib/actions/lookups";
 
@@ -17,9 +17,9 @@ export default async function QualityLevelsPage() {
         rows={rows}
         addLabel="เพิ่มเกณฑ์"
         columns={[
-          { key: "minScore", header: "คะแนนเฉลี่ยต่ำสุด", render: (r) => r.minScore.toFixed(2) },
-          { key: "maxScore", header: "คะแนนเฉลี่ยสูงสุด", render: (r) => r.maxScore.toFixed(2) },
-          { key: "label", header: "ระดับคุณภาพ", render: (r) => <LevelBadge label={r.label} color={r.color} /> },
+          { key: "minScore", header: "คะแนนเฉลี่ยต่ำสุด", cell: "number2" },
+          { key: "maxScore", header: "คะแนนเฉลี่ยสูงสุด", cell: "number2" },
+          { key: "label", header: "ระดับคุณภาพ", cell: "level", colorKey: "color" },
         ]}
         fields={[
           { name: "minScore", label: "คะแนนเฉลี่ยต่ำสุด", type: "number", step: "0.01", required: true },

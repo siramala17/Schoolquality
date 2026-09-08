@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getAssessmentForms } from "@/lib/data/lookups";
 import { requireRole } from "@/lib/auth-helpers";
 import { SectionTitle } from "@/components/ui";
@@ -25,23 +24,10 @@ export default async function AssessmentFormsPage() {
         rows={rows}
         addLabel="เพิ่มแบบประเมิน"
         columns={[
-          {
-            key: "name",
-            header: "ชื่อแบบประเมิน",
-            render: (r) => (
-              <Link href={`/assessment-forms/${r.id}`} className="text-primary font-medium hover:underline">
-                {r.name}
-              </Link>
-            ),
-          },
+          { key: "name", header: "ชื่อแบบประเมิน", link: { prefix: "/assessment-forms/" } },
           { key: "domains", header: "จำนวนด้าน" },
           { key: "assignments", header: "ถูกใช้ (ครั้ง)" },
-          {
-            key: "active",
-            header: "สถานะ",
-            render: (r) =>
-              r.active ? <span className="text-good">ใช้งาน</span> : <span className="text-text-muted">ปิด</span>,
-          },
+          { key: "active", header: "สถานะ", cell: "bool" },
         ]}
         fields={[
           { name: "name", label: "ชื่อแบบประเมิน", required: true, placeholder: "แบบประเมินการนิเทศภายใน" },

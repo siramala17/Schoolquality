@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { PrimaryButton, SecondaryButton, GradientButton, inputClass, EmptyState } from "@/components/ui";
+import Link from "next/link";
+import { PrimaryButton, SecondaryButton, GradientButton, inputClass, EmptyState, LevelBadge } from "@/components/ui";
 
 export type FieldDef = {
   name: string;
@@ -15,12 +16,49 @@ export type FieldDef = {
   colSpan?: 1 | 2;
 };
 
-export type ColumnDef<Row> = {
+export type ColumnDef = {
   key: string;
   header: string;
-  render?: (row: Row) => React.ReactNode;
+  /** how to render the cell value; defaults to plain text */
+  cell?: "text" | "number2" | "bool" | "level";
+  /** value -> label mapping (e.g. role enum -> Thai) */
+  map?: Record<string, string>;
+  /** render as a link: href = prefix + row[idKey ?? "id"] */
+  link?: { prefix: string; idKey?: string };
+  trueText?: string;
+  falseText?: string;
+  /** for cell "level": row key holding the color */
+  colorKey?: string;
   className?: string;
 };
+
+function renderCell(col: ColumnDef, row: Record<string, unknown>) {
+  const raw = row[col.key];
+  if (col.cell === "bool") {
+    return raw ? (
+      <span className="text-good">{col.trueText ?? "ใช้งาน"}</span>
+    ) : (
+      <span className="text-text-muted">{col.falseText ?? "ปิด"}</span>
+    );
+  }
+  if (col.cell === "level") {
+    return <LevelBadge label={raw == null ? null : String(raw)} color={col.colorKey ? String(row[col.colorKey] ?? "") : undefined} />;
+  }
+  if (col.cell === "number2") {
+    return raw == null || raw === "" ? "-" : Number(raw).toFixed(2);
+  }
+  let text: string = raw == null || raw === "" ? "-" : String(raw);
+  if (col.map && raw != null) text = col.map[String(raw)] ?? text;
+  if (col.link) {
+    const href = col.link.prefix + String(row[col.link.idKey ?? "id"] ?? "");
+    return (
+      <Link href={href} className="text-primary font-medium hover:underline">
+        {text}
+      </Link>
+    );
+  }
+  return text;
+}
 
 type ActionResult = { error?: string } | void;
 
@@ -30,7 +68,9 @@ export type CrudActions = {
   remove: (id: string) => Promise<ActionResult>;
 };
 
-export default function CrudManager<Row extends { id: string }>({
+type Row = { id: string } & Record<string, unknown>;
+
+export default function CrudManager({
   rows,
   columns,
   fields,
@@ -39,7 +79,7 @@ export default function CrudManager<Row extends { id: string }>({
   emptyText = "ยังไม่มีข้อมูล",
 }: {
   rows: Row[];
-  columns: ColumnDef<Row>[];
+  columns: ColumnDef[];
   fields: FieldDef[];
   actions: CrudActions;
   addLabel?: string;
@@ -144,7 +184,7 @@ export default function CrudManager<Row extends { id: string }>({
                   <td className="px-4 py-3 text-text-muted">{i + 1}</td>
                   {columns.map((c) => (
                     <td key={c.key} className={`px-4 py-3 ${c.className ?? ""}`}>
-                      {c.render ? c.render(row) : String((row as Record<string, unknown>)[c.key] ?? "-")}
+                      {renderCell(c, row)}
                     </td>
                   ))}
                   <td className="px-4 py-3">

@@ -68,19 +68,29 @@ export function LevelDonut({
   palette: { label: string; color: string }[];
 }) {
   const colorOf = (label: string) => palette.find((p) => p.label === label)?.color ?? "#94a3b8";
-  if (data.every((d) => d.value === 0)) return <Empty />;
+  const shown = data.filter((d) => d.value > 0);
+  if (shown.length === 0) return <Empty />;
   return (
     <div>
-      <ResponsiveContainer width="100%" height={220}>
-        <PieChart>
-          <Pie data={data} dataKey="value" nameKey="label" innerRadius={55} outerRadius={85} paddingAngle={2}>
-            {data.map((d) => (
-              <Cell key={d.label} fill={colorOf(d.label)} />
-            ))}
-          </Pie>
-          <Tooltip />
-        </PieChart>
-      </ResponsiveContainer>
+      <div style={{ width: "100%", height: 240 }}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={shown}
+              dataKey="value"
+              nameKey="label"
+              innerRadius={60}
+              outerRadius={95}
+              paddingAngle={shown.length > 1 ? 2 : 0}
+            >
+              {shown.map((d) => (
+                <Cell key={d.label} fill={colorOf(d.label)} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
       <div className="flex flex-wrap justify-center gap-3 mt-2">
         {palette.map((p) => (
           <span key={p.label} className="flex items-center gap-1.5 text-xs text-text-muted">

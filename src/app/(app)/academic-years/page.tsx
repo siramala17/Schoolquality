@@ -18,16 +18,7 @@ export default async function AcademicYearsPage() {
         addLabel="เพิ่มปีการศึกษา"
         columns={[
           { key: "year", header: "ปีการศึกษา" },
-          {
-            key: "active",
-            header: "สถานะ",
-            render: (r) =>
-              r.active ? (
-                <span className="text-good font-medium">ใช้งานอยู่</span>
-              ) : (
-                <span className="text-text-muted">ปิดใช้งาน</span>
-              ),
-          },
+          { key: "active", header: "สถานะ", cell: "bool", trueText: "ใช้งานอยู่", falseText: "ปิดใช้งาน" },
         ]}
         fields={[
           { name: "year", label: "ปีการศึกษา (พ.ศ.)", required: true, placeholder: "2568" },

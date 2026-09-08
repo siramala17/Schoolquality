@@ -211,9 +211,11 @@ async function main() {
             committeeMemberId: seat.id,
             submittedAt: new Date("2026-08-28T10:00:00+07:00"),
             signatureData: sig(row.user.name),
-            strengths: "จัดการเรียนรู้ได้ตามแผน ผู้เรียนมีส่วนร่วม",
-            improvements: "ควรเพิ่มการประเมินระหว่างเรียนให้หลากหลาย",
-            suggestions: "นำเทคนิคการตั้งคำถามปลายเปิดมาใช้เพิ่มเติม",
+            strengths: row.notes
+              ? `จุดเด่น: ${row.notes}`
+              : "เตรียมการสอนเป็นระบบ ใช้สื่อได้เหมาะสม ผู้เรียนมีส่วนร่วมตลอดคาบ",
+            improvements: "ควรเพิ่มการประเมินระหว่างเรียนที่หลากหลาย และเปิดโอกาสให้ผู้เรียนสะท้อนคิดมากขึ้น",
+            suggestions: "นำเทคนิคการตั้งคำถามปลายเปิดและการเรียนรู้แบบร่วมมือมาใช้ในคาบต่อไป",
           },
         });
         const data: { evaluationId: string; itemId: string; score: number }[] = [];
