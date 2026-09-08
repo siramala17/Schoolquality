@@ -1,14 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f4f5fa;
+  --bg: #f1f7f5;
   --surface: #ffffff;
-  --text: #1e2130;
-  --text-muted: #6b7280;
-  --border: #e5e7eb;
-  --primary: #4f46e5;
-  --primary-dark: #3730a3;
-  --accent: #0d9488;
+  --text: #1e2a28;
+  --text-muted: #6b7a77;
+  --border: #e2e8e6;
+  --primary: #0d9488;
+  --primary-dark: #0f5c52;
+  --primary-deep: #134e4a;
+  --accent: #3730a3;
   --good: #2e7d32;
   --warn: #ef6c00;
   --bad: #c62828;
@@ -18,6 +19,7 @@
   --font-sans: var(--font-sarabun), "Segoe UI", sans-serif;
   --color-primary: var(--primary);
   --color-primary-dark: var(--primary-dark);
+  --color-primary-deep: var(--primary-deep);
   --color-accent: var(--accent);
   --color-surface: var(--surface);
   --color-bg: var(--bg);
@@ -34,8 +36,28 @@ body {
   color: var(--text);
 }
 
+/* Gradient used for domain section headers (ด้านที่ N) */
+.domain-header {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  color: #fff;
+}
+
+.brand-gradient {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
 @media print {
   .no-print {
     display: none !important;
   }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    background: #fff;
+  }
+}
+
+.print-only {
+  display: none;
 }

@@ -9,9 +9,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const ev = await prisma.evidence.findUnique({ where: { id } });
   if (!ev) return NextResponse.json({ error: "not found" }, { status: 404 });
-  if (session.user.role === "TEACHER" && ev.uploaderId !== session.user.id) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
 
   return new NextResponse(new Uint8Array(ev.fileData), {
     headers: {

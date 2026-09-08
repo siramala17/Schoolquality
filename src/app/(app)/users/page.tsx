@@ -1,58 +1,67 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { getAllUsers } from "@/lib/data/users";
-import { Card } from "@/components/ui";
+import { getUsers, getSubjectGroups } from "@/lib/data/lookups";
+import { requireRole } from "@/lib/auth-helpers";
+import { SectionTitle } from "@/components/ui";
 import { ROLE_LABELS } from "@/lib/labels";
-import UserFormButton from "@/components/users/UserFormButton";
+import CrudManager from "@/components/crud/CrudManager";
+import { createUser, updateUser, deleteUser } from "@/lib/actions/users";
 
 export default async function UsersPage() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") redirect("/dashboard");
+  await requireRole(["ADMIN"]);
+  const [users, subjectGroups] = await Promise.all([getUsers(), getSubjectGroups()]);
 
-  const users = await getAllUsers();
+  const rows = users.map((u) => ({
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    role: u.role,
+    position: u.position ?? "",
+    subjectGroupId: u.subjectGroupId ?? "",
+    subjectGroupName: u.subjectGroup?.name ?? "",
+    active: u.active,
+  }));
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <UserFormButton />
-      </div>
-      <Card className="p-0 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-text-muted uppercase border-b-2 border-border">
-              <th className="px-4 py-2.5">อีเมล</th>
-              <th className="px-4 py-2.5">ชื่อ</th>
-              <th className="px-4 py-2.5">บทบาท</th>
-              <th className="px-4 py-2.5">กลุ่มสาระ</th>
-              <th className="px-4 py-2.5">สถานะ</th>
-              <th className="px-4 py-2.5"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id} className="border-b border-border last:border-0">
-                <td className="px-4 py-2.5">{u.email}</td>
-                <td className="px-4 py-2.5">{u.name}</td>
-                <td className="px-4 py-2.5">{ROLE_LABELS[u.role]}</td>
-                <td className="px-4 py-2.5">{u.subjectGroup || "-"}</td>
-                <td className="px-4 py-2.5">{u.active ? "ใช้งาน" : "ปิดใช้งาน"}</td>
-                <td className="px-4 py-2.5">
-                  <UserFormButton
-                    initial={{
-                      email: u.email,
-                      name: u.name,
-                      role: u.role,
-                      subjectGroup: u.subjectGroup,
-                      position: u.position,
-                      active: u.active,
-                    }}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+    <div>
+      <SectionTitle icon="👥" count={rows.length}>
+        จัดการผู้ใช้งาน
+      </SectionTitle>
+      <CrudManager
+        rows={rows}
+        addLabel="เพิ่มผู้ใช้งาน"
+        columns={[
+          { key: "name", header: "ชื่อ-นามสกุล" },
+          { key: "email", header: "อีเมล", className: "text-text-muted" },
+          { key: "role", header: "บทบาท", render: (r) => ROLE_LABELS[r.role] },
+          { key: "position", header: "ตำแหน่ง", render: (r) => r.position || "-" },
+          { key: "subjectGroupName", header: "กลุ่มสาระ", render: (r) => r.subjectGroupName || "-" },
+          {
+            key: "active",
+            header: "สถานะ",
+            render: (r) =>
+              r.active ? <span className="text-good">ใช้งาน</span> : <span className="text-text-muted">ปิด</span>,
+          },
+        ]}
+        fields={[
+          { name: "name", label: "ชื่อ-นามสกุล", required: true },
+          { name: "email", label: "อีเมล", type: "email", required: true },
+          {
+            name: "role",
+            label: "บทบาท",
+            type: "select",
+            required: true,
+            options: Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label })),
+          },
+          { name: "position", label: "ตำแหน่ง", placeholder: "ครูชำนาญการ" },
+          {
+            name: "subjectGroupId",
+            label: "กลุ่มสาระการเรียนรู้",
+            type: "select",
+            options: subjectGroups.map((s) => ({ value: s.id, label: s.name })),
+          },
+          { name: "active", label: "เปิดใช้งานบัญชี", type: "checkbox" },
+        ]}
+        actions={{ create: createUser, update: updateUser, remove: deleteUser }}
+      />
     </div>
   );
 }

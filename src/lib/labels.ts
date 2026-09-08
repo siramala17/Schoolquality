@@ -1,4 +1,4 @@
-import type { Role, PlanStatus, FeedbackStatus } from "@/generated/prisma/enums";
+import type { Role, AssignmentStatus } from "@/generated/prisma/enums";
 
 export const ROLE_LABELS: Record<Role, string> = {
   ADMIN: "ผู้ดูแลระบบ",
@@ -6,26 +6,16 @@ export const ROLE_LABELS: Record<Role, string> = {
   TEACHER: "ครู",
 };
 
-export const PLAN_STATUS_LABELS: Record<PlanStatus, string> = {
-  SCHEDULED: "กำหนดการ",
-  DONE: "เสร็จสิ้น",
-  CANCELLED: "ยกเลิก",
+export const ASSIGNMENT_STATUS_LABELS: Record<AssignmentStatus, string> = {
+  PENDING: "รอการประเมิน",
+  IN_PROGRESS: "กำลังประเมิน",
+  COMPLETED: "ประเมินเสร็จแล้ว",
 };
 
-export const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, string> = {
-  PENDING: "รอติดตาม",
-  IN_PROGRESS: "อยู่ระหว่างพัฒนา",
-  DONE: "เสร็จสิ้น",
+export const ASSIGNMENT_STATUS_CLASS: Record<AssignmentStatus, string> = {
+  PENDING: "bg-slate-100 text-slate-600",
+  IN_PROGRESS: "bg-amber-50 text-amber-700",
+  COMPLETED: "bg-emerald-50 text-emerald-700",
 };
 
-export const PLAN_STATUS_CLASS: Record<PlanStatus, string> = {
-  SCHEDULED: "bg-amber-50 text-amber-700",
-  DONE: "bg-emerald-50 text-emerald-700",
-  CANCELLED: "bg-rose-50 text-rose-700",
-};
-
-export const FEEDBACK_STATUS_CLASS: Record<FeedbackStatus, string> = {
-  PENDING: "bg-amber-50 text-amber-700",
-  IN_PROGRESS: "bg-sky-50 text-sky-700",
-  DONE: "bg-emerald-50 text-emerald-700",
-};
+export const COMMITTEE_ROLE_OPTIONS = ["ประธานกรรมการ", "กรรมการ", "กรรมการและเลขานุการ"];

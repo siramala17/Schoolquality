@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -18,101 +16,208 @@ enum Role {
   TEACHER
 }
 
-enum PlanStatus {
-  SCHEDULED
-  DONE
-  CANCELLED
-}
-
-enum FeedbackStatus {
+enum AssignmentStatus {
   PENDING
   IN_PROGRESS
-  DONE
+  COMPLETED
+}
+
+/// ข้อมูลโรงเรียน — single row, id = "default"
+model School {
+  id           String   @id @default("default")
+  name         String
+  department   String
+  address      String?
+  logoData     Bytes?
+  logoType     String?
+  updatedAt    DateTime @updatedAt
+}
+
+/// จัดการปีการศึกษา
+model AcademicYear {
+  id     String  @id @default(cuid())
+  year   String  @unique
+  active Boolean @default(false)
+
+  assignments Assignment[]
+}
+
+/// จัดการภาคเรียน
+model Semester {
+  id    String @id @default(cuid())
+  name  String
+  order Int    @default(0)
+
+  assignments Assignment[]
+}
+
+/// จัดการรอบที่
+model Round {
+  id    String @id @default(cuid())
+  name  String
+  order Int    @default(0)
+
+  assignments Assignment[]
+}
+
+/// จัดการชั้นเรียน
+model Classroom {
+  id    String @id @default(cuid())
+  name  String
+  order Int    @default(0)
+
+  assignments Assignment[]
+}
+
+/// กลุ่มสาระการเรียนรู้
+model SubjectGroup {
+  id    String @id @default(cuid())
+  name  String
+  order Int    @default(0)
+
+  users       User[]
+  assignments Assignment[]
+}
+
+/// เกณฑ์ระดับคุณภาพ
+model QualityLevel {
+  id       String @id @default(cuid())
+  minScore Float
+  maxScore Float
+  label    String
+  color    String
+  order    Int    @default(0)
+}
+
+/// จัดการแบบประเมิน
+model AssessmentForm {
+  id     String   @id @default(cuid())
+  name   String
+  active Boolean  @default(true)
+
+  domains     Domain[]
+  assignments Assignment[]
+}
+
+model Domain {
+  id     String @id @default(cuid())
+  name   String
+  order  Int    @default(0)
+  formId String
+  form   AssessmentForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  items Item[]
+}
+
+model Item {
+  id       String @id @default(cuid())
+  name     String
+  order    Int    @default(0)
+  domainId String
+  domain   Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  scores ItemScore[]
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  role         Role     @default(TEACHER)
-  subjectGroup String?
-  position     String?
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  role           Role     @default(TEACHER)
+  position       String?
+  subjectGroupId String?
+  subjectGroup   SubjectGroup? @relation(fields: [subjectGroupId], references: [id])
+  avatarData     Bytes?
+  avatarType     String?
+  signatureData  String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
 
-  plansAsTeacher       Plan[]        @relation("PlanTeacher")
-  plansAsSupervisor    Plan[]        @relation("PlanSupervisor")
-  obsAsTeacher         Observation[] @relation("ObsTeacher")
-  obsAsSupervisor      Observation[] @relation("ObsSupervisor")
-  evidence             Evidence[]
+  assignmentsAsTeacher Assignment[]      @relation("AssignmentTeacher")
+  committeeSeats       CommitteeMember[]
 }
 
-model Plan {
-  id           String     @id @default(cuid())
-  semester     String
-  academicYear String
-  date         DateTime
-  time         String?
-  subjectGroup String?
-  topic        String?
-  status       PlanStatus @default(SCHEDULED)
-  createdAt    DateTime   @default(now())
+/// มอบหมายชุดประเมิน — one teacher, one round/semester/year
+model Assignment {
+  id                   String           @id @default(cuid())
+  status               AssignmentStatus @default(PENDING)
+  acknowledgedAt       DateTime?
+  teacherSignatureData String?
+  createdAt            DateTime         @default(now())
 
-  supervisorId String
-  supervisor   User @relation("PlanSupervisor", fields: [supervisorId], references: [id])
-  teacherId    String
-  teacher      User @relation("PlanTeacher", fields: [teacherId], references: [id])
+  teacherId      String
+  teacher        User          @relation("AssignmentTeacher", fields: [teacherId], references: [id])
+  formId         String
+  form           AssessmentForm @relation(fields: [formId], references: [id])
+  academicYearId String
+  academicYear   AcademicYear  @relation(fields: [academicYearId], references: [id])
+  semesterId     String
+  semester       Semester      @relation(fields: [semesterId], references: [id])
+  roundId        String
+  round          Round         @relation(fields: [roundId], references: [id])
+  classroomId    String?
+  classroom      Classroom?    @relation(fields: [classroomId], references: [id])
+  subjectGroupId String?
+  subjectGroup   SubjectGroup? @relation(fields: [subjectGroupId], references: [id])
 
-  observation  Observation?
+  committee CommitteeMember[]
+
+  @@unique([teacherId, roundId, semesterId, academicYearId])
 }
 
-model Observation {
-  id               String   @id @default(cuid())
-  date             DateTime
-  subjectGroup     String?
-  classRoom        String?
-  subject          String?
-  scoresJson       String
-  domainScoresJson String
-  overallScore     Float
-  level            String
-  createdAt        DateTime @default(now())
+/// แต่งตั้งกรรมการ
+model CommitteeMember {
+  id        String @id @default(cuid())
+  roleLabel String?
+  order     Int    @default(0)
 
-  planId       String? @unique
-  plan         Plan?   @relation(fields: [planId], references: [id])
-  supervisorId String
-  supervisor   User    @relation("ObsSupervisor", fields: [supervisorId], references: [id])
-  teacherId    String
-  teacher      User    @relation("ObsTeacher", fields: [teacherId], references: [id])
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
 
-  feedback  Feedback?
-  evidence  Evidence[]
+  evaluation Evaluation?
+
+  @@unique([assignmentId, userId])
 }
 
-model Feedback {
-  id              String         @id @default(cuid())
-  strengths       String?
-  improvements    String?
-  suggestions     String?
-  teacherResponse String?
-  status          FeedbackStatus @default(PENDING)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+/// ผลการประเมินของกรรมการหนึ่งคน
+model Evaluation {
+  id            String   @id @default(cuid())
+  submittedAt   DateTime?
+  strengths     String?
+  improvements  String?
+  suggestions   String?
+  signatureData String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  observationId String      @unique
-  observation   Observation @relation(fields: [observationId], references: [id])
+  committeeMemberId String          @unique
+  committeeMember   CommitteeMember @relation(fields: [committeeMemberId], references: [id], onDelete: Cascade)
+
+  scores   ItemScore[]
+  evidence Evidence[]
 }
 
+model ItemScore {
+  id           String @id @default(cuid())
+  score        Int
+  evaluationId String
+  evaluation   Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  itemId       String
+  item         Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([evaluationId, itemId])
+}
+
+/// รูปภาพประกอบการนิเทศ
 model Evidence {
-  id          String   @id @default(cuid())
-  fileName    String
-  fileType    String
-  fileData    Bytes
-  description String?
-  uploadedAt  DateTime @default(now())
+  id         String   @id @default(cuid())
+  fileName   String
+  fileType   String
+  fileData   Bytes
+  uploadedAt DateTime @default(now())
 
-  uploaderId    String
-  uploader      User         @relation(fields: [uploaderId], references: [id])
-  observationId String?
-  observation   Observation? @relation(fields: [observationId], references: [id])
+  evaluationId String
+  evaluation   Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
 }

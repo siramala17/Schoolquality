@@ -9,8 +9,8 @@ const sarabun = Sarabun({
 });
 
 export const metadata: Metadata = {
-  title: "SMART SUPERVISION 360°",
-  description: "ระบบนิเทศภายในโรงเรียนอัจฉริยะ",
+  title: "ระบบนิเทศภายในโรงเรียน",
+  description: "ระบบบริหารจัดการและประเมินการนิเทศ",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

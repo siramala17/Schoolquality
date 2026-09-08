@@ -1,0 +1,40 @@
+import { getAcademicYears } from "@/lib/data/lookups";
+import { requireRole } from "@/lib/auth-helpers";
+import { SectionTitle } from "@/components/ui";
+import CrudManager from "@/components/crud/CrudManager";
+import { createAcademicYear, updateAcademicYear, deleteAcademicYear } from "@/lib/actions/lookups";
+
+export default async function AcademicYearsPage() {
+  await requireRole(["ADMIN"]);
+  const rows = await getAcademicYears();
+
+  return (
+    <div>
+      <SectionTitle icon="📅" count={rows.length}>
+        จัดการปีการศึกษา
+      </SectionTitle>
+      <CrudManager
+        rows={rows}
+        addLabel="เพิ่มปีการศึกษา"
+        columns={[
+          { key: "year", header: "ปีการศึกษา" },
+          {
+            key: "active",
+            header: "สถานะ",
+            render: (r) =>
+              r.active ? (
+                <span className="text-good font-medium">ใช้งานอยู่</span>
+              ) : (
+                <span className="text-text-muted">ปิดใช้งาน</span>
+              ),
+          },
+        ]}
+        fields={[
+          { name: "year", label: "ปีการศึกษา (พ.ศ.)", required: true, placeholder: "2568" },
+          { name: "active", label: "กำหนดเป็นปีการศึกษาปัจจุบัน", type: "checkbox" },
+        ]}
+        actions={{ create: createAcademicYear, update: updateAcademicYear, remove: deleteAcademicYear }}
+      />
+    </div>
+  );
+}

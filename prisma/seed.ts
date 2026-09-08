@@ -1,166 +1,321 @@
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { computeScores } from "../src/lib/rubric";
+import { DEFAULT_QUALITY_LEVELS } from "../src/lib/scoring";
 import "dotenv/config";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-function daysAgo(n: number) {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d;
-}
-function daysFromNow(n: number) {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return d;
+function sig(name: string) {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='220' height='70'><text x='10' y='45' font-size='26' font-family='Segoe Script, Bradley Hand, cursive' font-style='italic' fill='#1e2a28'>${name}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 async function main() {
+  // wipe (order matters for FKs)
   await prisma.evidence.deleteMany();
-  await prisma.feedback.deleteMany();
-  await prisma.observation.deleteMany();
-  await prisma.plan.deleteMany();
+  await prisma.itemScore.deleteMany();
+  await prisma.evaluation.deleteMany();
+  await prisma.committeeMember.deleteMany();
+  await prisma.assignment.deleteMany();
+  await prisma.item.deleteMany();
+  await prisma.domain.deleteMany();
+  await prisma.assessmentForm.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.qualityLevel.deleteMany();
+  await prisma.classroom.deleteMany();
+  await prisma.subjectGroup.deleteMany();
+  await prisma.round.deleteMany();
+  await prisma.semester.deleteMany();
+  await prisma.academicYear.deleteMany();
+  await prisma.school.deleteMany();
+
+  await prisma.school.create({
+    data: {
+      id: "default",
+      name: "โรงเรียนเทศบาลวัดกลาง",
+      department: "สำนักการศึกษาเทศบาลนครขอนแก่น",
+      address: "อำเภอเมืองขอนแก่น จังหวัดขอนแก่น",
+    },
+  });
+
+  await prisma.qualityLevel.createMany({ data: DEFAULT_QUALITY_LEVELS });
+
+  const y2568 = await prisma.academicYear.create({ data: { year: "2568", active: true } });
+  const y2569 = await prisma.academicYear.create({ data: { year: "2569", active: false } });
+
+  const sem1 = await prisma.semester.create({ data: { name: "ภาคเรียนที่ 1", order: 1 } });
+  await prisma.semester.create({ data: { name: "ภาคเรียนที่ 2", order: 2 } });
+
+  const round1 = await prisma.round.create({ data: { name: "รอบที่ 1", order: 1 } });
+  const round2 = await prisma.round.create({ data: { name: "รอบที่ 2", order: 2 } });
+
+  const classNames = ["ม.1/1", "ม.1/2", "ม.2/1", "ม.2/2", "ม.3/1", "ม.3/2"];
+  const classrooms = await Promise.all(
+    classNames.map((name, i) => prisma.classroom.create({ data: { name, order: i + 1 } })),
+  );
+
+  const sgNames = [
+    "คณิตศาสตร์",
+    "ภาษาไทย",
+    "วิทยาศาสตร์และเทคโนโลยี",
+    "ภาษาต่างประเทศ",
+    "สังคมศึกษา ศาสนาและวัฒนธรรม",
+    "สุขศึกษาและพลศึกษา",
+    "ศิลปะ",
+    "การงานอาชีพ",
+  ];
+  const sgs = await Promise.all(sgNames.map((name, i) => prisma.subjectGroup.create({ data: { name, order: i + 1 } })));
+  const sg = (n: string) => sgs.find((s) => s.name.startsWith(n))!.id;
 
   const admin = await prisma.user.create({
-    data: { email: "admin@school.ac.th", name: "ผู้ดูแลระบบ", role: "ADMIN", position: "ผู้ดูแลระบบ" },
+    data: { email: "admin@watklang.ac.th", name: "นายสมชาย ใจดี", role: "ADMIN", position: "ผู้ดูแลระบบ", signatureData: sig("S. Jaidee") },
   });
-  const director = await prisma.user.create({
+  const wichai = await prisma.user.create({
     data: {
-      email: "director@school.ac.th",
-      name: "ผอ.สมชาย ใจดี",
+      email: "wichai@watklang.ac.th",
+      name: "นายวิชัย เก่งกาจ",
       role: "EXECUTIVE",
       position: "ผู้อำนวยการโรงเรียน",
+      signatureData: sig("W. Kengkaj"),
+    },
+  });
+  const prasert = await prisma.user.create({
+    data: {
+      email: "prasert@watklang.ac.th",
+      name: "นายประเสริฐ ขยันดี",
+      role: "EXECUTIVE",
+      position: "ครูชำนาญการพิเศษ",
+      signatureData: sig("P. Khayandee"),
     },
   });
 
-  const [t1, t2, t3, t4, t5] = await Promise.all([
-    prisma.user.create({
-      data: { email: "teacher1@school.ac.th", name: "ครูสมหญิง รักเรียน", role: "TEACHER", subjectGroup: "คณิตศาสตร์" },
-    }),
-    prisma.user.create({
-      data: { email: "teacher2@school.ac.th", name: "ครูวิชัย ตั้งใจสอน", role: "TEACHER", subjectGroup: "ภาษาไทย" },
-    }),
-    prisma.user.create({
-      data: { email: "teacher3@school.ac.th", name: "ครูปราณี ขยันดี", role: "TEACHER", subjectGroup: "วิทยาศาสตร์" },
-    }),
-    prisma.user.create({
-      data: { email: "teacher4@school.ac.th", name: "ครูอนุชา มุ่งมั่น", role: "TEACHER", subjectGroup: "ภาษาอังกฤษ" },
-    }),
-    prisma.user.create({
-      data: { email: "teacher5@school.ac.th", name: "ครูสุดา พัฒนาการ", role: "TEACHER", subjectGroup: "สังคมศึกษา" },
-    }),
-  ]);
-
-  const donePlan1 = await prisma.plan.create({
+  const malee = await prisma.user.create({
     data: {
-      semester: "1", academicYear: "2568", date: daysAgo(20), time: "09:00",
-      subjectGroup: t1.subjectGroup, topic: "การแก้โจทย์ปัญหาสมการเชิงเส้น",
-      status: "DONE", supervisorId: director.id, teacherId: t1.id,
+      email: "malee@watklang.ac.th",
+      name: "นางสาวมาลี รักเรียน",
+      role: "TEACHER",
+      position: "ครูชำนาญการ",
+      subjectGroupId: sg("คณิตศาสตร์"),
+      signatureData: sig("Malee R."),
     },
   });
-  const donePlan2 = await prisma.plan.create({
+  const suda = await prisma.user.create({
     data: {
-      semester: "1", academicYear: "2568", date: daysAgo(12), time: "10:30",
-      subjectGroup: t2.subjectGroup, topic: "การอ่านจับใจความ",
-      status: "DONE", supervisorId: admin.id, teacherId: t2.id,
+      email: "suda@watklang.ac.th",
+      name: "นางสาวสุดา ฉลาดเฉลียว",
+      role: "TEACHER",
+      position: "ครูชำนาญการ",
+      subjectGroupId: sg("ภาษาไทย"),
     },
   });
-  const donePlan3 = await prisma.plan.create({
+  const supakhen = await prisma.user.create({
     data: {
-      semester: "1", academicYear: "2568", date: daysAgo(5), time: "13:00",
-      subjectGroup: t3.subjectGroup, topic: "การทดลองทางวิทยาศาสตร์เบื้องต้น",
-      status: "DONE", supervisorId: director.id, teacherId: t3.id,
+      email: "supakhen@watklang.ac.th",
+      name: "นายศุภเขน ปัญญาภา",
+      role: "TEACHER",
+      position: "ครู",
+      subjectGroupId: sg("วิทยาศาสตร์"),
     },
   });
-  await prisma.plan.create({
+  const anucha = await prisma.user.create({
     data: {
-      semester: "1", academicYear: "2568", date: daysFromNow(3), time: "09:00",
-      subjectGroup: t4.subjectGroup, topic: "Speaking Skills Practice",
-      status: "SCHEDULED", supervisorId: director.id, teacherId: t4.id,
+      email: "anucha@watklang.ac.th",
+      name: "นายอนุชา มุ่งมั่น",
+      role: "TEACHER",
+      position: "ครู",
+      subjectGroupId: sg("ภาษาต่างประเทศ"),
     },
   });
-  await prisma.plan.create({
+  const kanlaya = await prisma.user.create({
     data: {
-      semester: "1", academicYear: "2568", date: daysFromNow(9), time: "11:00",
-      subjectGroup: t5.subjectGroup, topic: "ประวัติศาสตร์ไทยสมัยรัตนโกสินทร์",
-      status: "SCHEDULED", supervisorId: admin.id, teacherId: t5.id,
+      email: "kanlaya@watklang.ac.th",
+      name: "นางกัลยา ตั้งใจ",
+      role: "TEACHER",
+      position: "ครู",
+      subjectGroupId: sg("สังคมศึกษา"),
     },
   });
 
-  const highScores = { prep: [5, 5, 4], activity: [5, 4, 5], media: [4, 5, 4], assess: [5, 4, 5], classroom: [5, 5, 5] };
-  const midScores = { prep: [4, 3, 4], activity: [4, 4, 3], media: [3, 3, 4], assess: [4, 3, 3], classroom: [4, 4, 4] };
-  const lowScores = { prep: [3, 2, 3], activity: [2, 3, 2], media: [2, 2, 3], assess: [3, 2, 2], classroom: [3, 3, 2] };
+  const form = await prisma.assessmentForm.create({ data: { name: "แบบประเมินการนิเทศภายใน", active: true } });
 
-  const obs1 = await buildObservation(donePlan1.id, t1.id, director.id, daysAgo(20), "คณิตศาสตร์", "ม.2/1", "คณิตศาสตร์", highScores);
-  const obs2 = await buildObservation(donePlan2.id, t2.id, admin.id, daysAgo(12), "ภาษาไทย", "ป.6/2", "ภาษาไทย", midScores);
-  const obs3 = await buildObservation(donePlan3.id, t3.id, director.id, daysAgo(5), "วิทยาศาสตร์", "ม.1/3", "วิทยาศาสตร์", lowScores);
+  const domainSpec: [string, string[]][] = [
+    [
+      "ด้านที่ 1: ด้านการจัดการเรียนการสอน",
+      [
+        "การวางแผนการจัดการเรียนรู้",
+        "การจัดกิจกรรมการเรียนรู้",
+        "การใช้สื่อและนวัตกรรม",
+        "การวัดและประเมินผลตามสภาพจริง",
+        "การใช้คำถามและการสะท้อนคิด",
+        "การจัดการเรียนรู้เชิงรุก (Active Learning)",
+      ],
+    ],
+    [
+      "ด้านที่ 2: ด้านการบริหารจัดการชั้นเรียน",
+      ["การสร้างบรรยากาศการเรียนรู้", "การดูแลช่วยเหลือนักเรียน", "การส่งเสริมวินัยเชิงบวก"],
+    ],
+    [
+      "ด้านที่ 3: ด้านคุณธรรมจริยธรรม",
+      ["การเป็นแบบอย่างที่ดี", "ความรับผิดชอบต่อหน้าที่", "การพัฒนาตนเองอย่างต่อเนื่อง"],
+    ],
+  ];
 
-  await prisma.feedback.create({
-    data: {
-      observationId: obs1.id,
-      strengths: "เตรียมการสอนดีมาก ใช้สื่อเทคโนโลยีได้อย่างมีประสิทธิภาพ นักเรียนมีส่วนร่วมสูง",
-      improvements: "อาจเพิ่มกิจกรรมกลุ่มย่อยให้หลากหลายขึ้น",
-      suggestions: "ลองใช้เทคนิค Think-Pair-Share ในชั่วโมงถัดไป",
-      teacherResponse: "ได้นำเทคนิค Think-Pair-Share ไปใช้ในสัปดาห์ถัดมาแล้ว นักเรียนตอบสนองดีขึ้น",
-      status: "DONE",
-    },
+  const domains: { id: string; items: { id: string }[] }[] = [];
+  for (let di = 0; di < domainSpec.length; di++) {
+    const [name, items] = domainSpec[di];
+    const d = await prisma.domain.create({ data: { formId: form.id, name, order: di + 1 } });
+    const createdItems = [];
+    for (let ii = 0; ii < items.length; ii++) {
+      createdItems.push(await prisma.item.create({ data: { domainId: d.id, name: items[ii], order: ii + 1 } }));
+    }
+    domains.push({ id: d.id, items: createdItems });
+  }
+
+  // helper: create an assignment with a committee and (optionally) their scores
+  type Row = { user: { id: string; name: string }; roleLabel: string; scores?: number[][]; notes?: string };
+  async function makeAssignment(opts: {
+    teacherId: string;
+    roundId: string;
+    yearId: string;
+    classroomId?: string;
+    subjectGroupId?: string;
+    rows: Row[];
+    completed: boolean;
+    acknowledgedBy?: string | null;
+  }) {
+    const a = await prisma.assignment.create({
+      data: {
+        teacherId: opts.teacherId,
+        formId: form.id,
+        academicYearId: opts.yearId,
+        semesterId: sem1.id,
+        roundId: opts.roundId,
+        classroomId: opts.classroomId,
+        subjectGroupId: opts.subjectGroupId,
+        status: opts.completed ? "COMPLETED" : "PENDING",
+        acknowledgedAt: opts.acknowledgedBy ? new Date("2026-08-30T09:00:00+07:00") : null,
+        teacherSignatureData: opts.acknowledgedBy ? sig(opts.acknowledgedBy) : null,
+      },
+    });
+
+    let order = 0;
+    for (const row of opts.rows) {
+      order++;
+      const seat = await prisma.committeeMember.create({
+        data: { assignmentId: a.id, userId: row.user.id, roleLabel: row.roleLabel, order },
+      });
+      if (row.scores) {
+        const ev = await prisma.evaluation.create({
+          data: {
+            committeeMemberId: seat.id,
+            submittedAt: new Date("2026-08-28T10:00:00+07:00"),
+            signatureData: sig(row.user.name),
+            strengths: "จัดการเรียนรู้ได้ตามแผน ผู้เรียนมีส่วนร่วม",
+            improvements: "ควรเพิ่มการประเมินระหว่างเรียนให้หลากหลาย",
+            suggestions: "นำเทคนิคการตั้งคำถามปลายเปิดมาใช้เพิ่มเติม",
+          },
+        });
+        const data: { evaluationId: string; itemId: string; score: number }[] = [];
+        row.scores.forEach((domScores, di) => {
+          domScores.forEach((score, ii) => {
+            data.push({ evaluationId: ev.id, itemId: domains[di].items[ii].id, score });
+          });
+        });
+        await prisma.itemScore.createMany({ data });
+      }
+    }
+    return a;
+  }
+
+  // มาลี — reproduces the summary screenshots exactly
+  await makeAssignment({
+    teacherId: malee.id,
+    roundId: round1.id,
+    yearId: y2568.id,
+    classroomId: classrooms[0].id,
+    subjectGroupId: sg("คณิตศาสตร์"),
+    completed: true,
+    acknowledgedBy: "Malee R.",
+    rows: [
+      { user: wichai, roleLabel: "ประธานกรรมการ", scores: [[5, 4, 5], [4, 5], [4, 4]] },
+      { user: prasert, roleLabel: "กรรมการ", scores: [[5, 4, 5], [4, 4], [5, 4]] },
+      { user: malee, roleLabel: "กรรมการและเลขานุการ", scores: [[3, 2, 2], [2, 2], [2, 3]] },
+    ],
   });
-  await prisma.feedback.create({
-    data: {
-      observationId: obs2.id,
-      strengths: "การจัดกิจกรรมการอ่านเหมาะสมกับวัยผู้เรียน",
-      improvements: "ควรเพิ่มการประเมินระหว่างเรียนให้บ่อยขึ้น",
-      suggestions: "จัดทำแบบสังเกตพฤติกรรมการอ่านรายบุคคล",
-      teacherResponse: "กำลังจัดทำแบบสังเกตพฤติกรรมการอ่าน คาดว่าจะใช้ได้ในสัปดาห์หน้า",
-      status: "IN_PROGRESS",
-    },
+
+  // สุดา — overall 3.50 (ดี)
+  await makeAssignment({
+    teacherId: suda.id,
+    roundId: round1.id,
+    yearId: y2568.id,
+    classroomId: classrooms[2].id,
+    subjectGroupId: sg("ภาษาไทย"),
+    completed: true,
+    acknowledgedBy: "Suda C.",
+    rows: [
+      { user: wichai, roleLabel: "ประธานกรรมการ", scores: [[3, 3, 3, 3, 3, 3], [3, 3, 3], [3, 3, 3]] },
+      { user: prasert, roleLabel: "กรรมการ", scores: [[4, 4, 4, 4, 4, 4], [4, 4, 4], [4, 4, 4]] },
+    ],
   });
-  await prisma.feedback.create({
+
+  // ศุภเขน — overall 4.33 (ดีมาก)
+  await makeAssignment({
+    teacherId: supakhen.id,
+    roundId: round1.id,
+    yearId: y2568.id,
+    classroomId: classrooms[4].id,
+    subjectGroupId: sg("วิทยาศาสตร์"),
+    completed: true,
+    acknowledgedBy: null,
+    rows: [
+      { user: wichai, roleLabel: "ประธานกรรมการ", scores: [[5, 5, 5, 5, 5, 5], [5, 5, 5], [5, 5, 5]] },
+      { user: prasert, roleLabel: "กรรมการ", scores: [[4, 4, 4, 4, 4, 4], [4, 4, 4], [4, 4, 4]] },
+      { user: supakhen, roleLabel: "กรรมการและเลขานุการ", scores: [[4, 4, 4, 4, 4, 4], [4, 4, 4], [4, 4, 4]] },
+    ],
+  });
+
+  // อนุชา, กัลยา — assigned committee but not yet evaluated (PENDING)
+  await makeAssignment({
+    teacherId: anucha.id,
+    roundId: round1.id,
+    yearId: y2568.id,
+    classroomId: classrooms[1].id,
+    subjectGroupId: sg("ภาษาต่างประเทศ"),
+    completed: false,
+    rows: [
+      { user: wichai, roleLabel: "ประธานกรรมการ" },
+      { user: prasert, roleLabel: "กรรมการ" },
+    ],
+  });
+  await makeAssignment({
+    teacherId: kanlaya.id,
+    roundId: round1.id,
+    yearId: y2568.id,
+    classroomId: classrooms[3].id,
+    subjectGroupId: sg("สังคมศึกษา"),
+    completed: false,
+    rows: [
+      { user: wichai, roleLabel: "ประธานกรรมการ" },
+      { user: prasert, roleLabel: "กรรมการ" },
+    ],
+  });
+
+  // มาลี รอบที่ 2 / 2569 — no committee yet (shows "รอการประเมิน")
+  await prisma.assignment.create({
     data: {
-      observationId: obs3.id,
-      strengths: "มีความตั้งใจในการเตรียมอุปกรณ์ทดลอง",
-      improvements: "การบริหารเวลาในชั้นเรียนยังไม่คงที่ ควรวางแผนเวลาแต่ละกิจกรรมให้ชัดเจน",
-      suggestions: "ลองใช้ตัวจับเวลาแสดงบนหน้าจอระหว่างทำกิจกรรม",
+      teacherId: malee.id,
+      formId: form.id,
+      academicYearId: y2569.id,
+      semesterId: sem1.id,
+      roundId: round2.id,
+      classroomId: classrooms[0].id,
+      subjectGroupId: sg("คณิตศาสตร์"),
       status: "PENDING",
     },
   });
 
-  await prisma.evidence.create({
-    data: {
-      uploaderId: t1.id,
-      observationId: obs1.id,
-      fileName: "บันทึกการใช้เทคนิค-Think-Pair-Share.txt",
-      fileType: "text/plain",
-      fileData: Buffer.from("บันทึกการนำเทคนิค Think-Pair-Share ไปใช้ในห้องเรียน ม.2/1", "utf-8"),
-      description: "หลักฐานการนำข้อเสนอแนะไปพัฒนาการสอน",
-    },
-  });
-
-  console.log("Seeded:", { admin: admin.email, director: director.email, teachers: [t1, t2, t3, t4, t5].map((t) => t.email) });
-
-  async function buildObservation(
-    planId: string,
-    teacherId: string,
-    supervisorId: string,
-    date: Date,
-    subjectGroup: string,
-    classRoom: string,
-    subject: string,
-    scores: Record<string, number[]>
-  ) {
-    const { domainScores, overallScore, level } = computeScores(scores);
-    return prisma.observation.create({
-      data: {
-        planId, date, subjectGroup, classRoom, subject,
-        scoresJson: JSON.stringify(scores),
-        domainScoresJson: JSON.stringify(domainScores),
-        overallScore, level, supervisorId, teacherId,
-      },
-    });
-  }
+  console.log("Seeded ✓  admin:", admin.email);
 }
 
 main()

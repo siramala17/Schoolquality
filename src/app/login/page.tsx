@@ -1,20 +1,32 @@
 import { prisma } from "@/lib/prisma";
 import { signIn } from "@/auth";
 import { ROLE_LABELS } from "@/lib/labels";
+import { getSchool } from "@/lib/data/lookups";
+
+export const dynamic = "force-dynamic";
 
 const isDev = process.env.NODE_ENV !== "production";
 const googleEnabled = !!process.env.GOOGLE_CLIENT_ID;
 
 export default async function LoginPage() {
-  const devUsers = isDev ? await prisma.user.findMany({ orderBy: { name: "asc" } }) : [];
+  const devUsers = isDev
+    ? await prisma.user.findMany({ orderBy: [{ role: "asc" }, { name: "asc" }] }).catch(() => [])
+    : [];
+  const school = await getSchool().catch(() => ({ name: "โรงเรียนเทศบาลวัดกลาง", department: "" }));
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-sm bg-surface rounded-2xl shadow-lg border border-border p-8">
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{ background: "linear-gradient(135deg, #0d9488 0%, #134e4a 55%, #1e3a8a 100%)" }}
+    >
+      <div className="w-full max-w-sm bg-surface rounded-2xl shadow-xl p-8">
         <div className="text-center mb-6">
-          <div className="text-3xl mb-2">🎯</div>
-          <h1 className="text-lg font-bold">SMART SUPERVISION 360°</h1>
-          <p className="text-sm text-text-muted mt-1">ระบบนิเทศภายในโรงเรียนอัจฉริยะ</p>
+          <div className="w-16 h-16 rounded-full brand-gradient mx-auto flex items-center justify-center text-3xl mb-3">
+            🏫
+          </div>
+          <h1 className="text-lg font-bold">ระบบนิเทศภายในโรงเรียน</h1>
+          <p className="text-sm text-text-muted mt-1">ระบบบริหารจัดการและประเมินการนิเทศ</p>
+          <p className="text-xs text-text-muted mt-2">{school.name}</p>
         </div>
 
         {googleEnabled && (
@@ -24,7 +36,7 @@ export default async function LoginPage() {
               await signIn("google", { redirectTo: "/dashboard" });
             }}
           >
-            <button className="w-full rounded-lg bg-primary text-white py-2.5 font-medium hover:bg-primary-dark">
+            <button className="w-full rounded-lg brand-gradient text-white py-2.5 font-medium hover:opacity-95">
               เข้าสู่ระบบด้วย Google
             </button>
           </form>
@@ -32,9 +44,7 @@ export default async function LoginPage() {
 
         {isDev && (
           <div className={googleEnabled ? "mt-6 pt-6 border-t border-border" : ""}>
-            <p className="text-xs text-text-muted mb-3">
-              โหมดพัฒนา — เข้าสู่ระบบโดยไม่ต้องตั้งค่า Google OAuth
-            </p>
+            <p className="text-xs text-text-muted mb-3">โหมดพัฒนา — เข้าสู่ระบบโดยไม่ต้องตั้งค่า Google OAuth</p>
 
             {devUsers.length > 0 && (
               <div className="space-y-2 mb-4">
@@ -61,9 +71,8 @@ export default async function LoginPage() {
               action={async (formData: FormData) => {
                 "use server";
                 const email = String(formData.get("email") || "").trim();
-                const name = String(formData.get("name") || "").trim();
                 if (!email) return;
-                await signIn("dev-login", { email, name, redirectTo: "/dashboard" });
+                await signIn("dev-login", { email, name: email.split("@")[0], redirectTo: "/dashboard" });
               }}
               className="flex gap-2"
             >
