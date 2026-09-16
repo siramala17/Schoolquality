@@ -24,7 +24,7 @@ export async function saveEvaluation(
   if (!seat) return { error: "ไม่พบรายการประเมิน" };
   if (seat.userId !== user.id && user.role !== "ADMIN") return { error: "คุณไม่มีสิทธิ์ประเมินรายการนี้" };
 
-  const scoreEntries = Object.entries(input.scores).filter(([, v]) => typeof v === "number" && v >= 1 && v <= 5);
+  const scoreEntries = Object.entries(input.scores).filter(([, v]) => typeof v === "number" && v >= 1 && v <= 4);
 
   if (input.submit && scoreEntries.length === 0) {
     return { error: "กรุณาให้คะแนนอย่างน้อย 1 รายการ" };

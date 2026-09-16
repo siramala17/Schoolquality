@@ -12,16 +12,14 @@ export type QualityLevelLike = {
 // Seeded into the QualityLevel table and used as a runtime fallback when the
 // table is empty. Matches the เกณฑ์ระดับคุณภาพ screen.
 export const DEFAULT_QUALITY_LEVELS: QualityLevelLike[] = [
-  { minScore: 4.51, maxScore: 5.0, label: "ดีเยี่ยม", color: "#0d9488", order: 1 },
-  { minScore: 3.51, maxScore: 4.5, label: "ดีมาก", color: "#7cb342", order: 2 },
-  { minScore: 2.51, maxScore: 3.5, label: "ดี", color: "#f9a825", order: 3 },
-  { minScore: 1.51, maxScore: 2.5, label: "พอใช้", color: "#fb8c00", order: 4 },
-  { minScore: 1.0, maxScore: 1.5, label: "ควรพัฒนา", color: "#e53935", order: 5 },
+  { minScore: 3.51, maxScore: 4.0, label: "ดีมาก", color: "#7cb342", order: 1 },
+  { minScore: 2.51, maxScore: 3.5, label: "ดี", color: "#f9a825", order: 2 },
+  { minScore: 1.51, maxScore: 2.5, label: "พอใช้", color: "#fb8c00", order: 3 },
+  { minScore: 1.0, maxScore: 1.5, label: "ปรับปรุง", color: "#e53935", order: 4 },
 ];
 
-// The fixed 1-5 chip colors used by the rating form and score badges everywhere.
+// The fixed 1-4 chip colors used by the rating form and score badges everywhere.
 export const SCORE_COLORS: Record<number, string> = {
-  5: "#0d9488",
   4: "#7cb342",
   3: "#f9a825",
   2: "#fb8c00",
@@ -56,7 +54,7 @@ export function levelFor(
 export type SummaryInput = {
   domains: { id: string; name: string; order: number; items: { id: string; name: string; order: number }[] }[];
   evaluators: { userId: string; name: string }[];
-  // scores[userId][itemId] = 1..5
+  // scores[userId][itemId] = 1..4
   scores: Record<string, Record<string, number>>;
   levels?: QualityLevelLike[];
 };

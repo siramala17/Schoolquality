@@ -24,7 +24,7 @@ export default async function QualityLevelsPage() {
         fields={[
           { name: "minScore", label: "คะแนนเฉลี่ยต่ำสุด", type: "number", step: "0.01", required: true },
           { name: "maxScore", label: "คะแนนเฉลี่ยสูงสุด", type: "number", step: "0.01", required: true },
-          { name: "label", label: "ชื่อระดับคุณภาพ", required: true, placeholder: "ดีเยี่ยม" },
+          { name: "label", label: "ชื่อระดับคุณภาพ", required: true, placeholder: "ดีมาก" },
           { name: "color", label: "สี (hex)", placeholder: "#0d9488" },
           { name: "order", label: "ลำดับ", type: "number" },
         ]}

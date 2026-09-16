@@ -12,11 +12,10 @@ type Domain = { id: string; name: string; items: Item[] };
 type Evidence = { id: string; fileName: string };
 
 const SCALE = [
-  { v: 1, label: "ควรพัฒนา" },
+  { v: 1, label: "ปรับปรุง" },
   { v: 2, label: "พอใช้" },
   { v: 3, label: "ดี" },
   { v: 4, label: "ดีมาก" },
-  { v: 5, label: "ดีเยี่ยม" },
 ];
 
 export default function EvaluateForm({
