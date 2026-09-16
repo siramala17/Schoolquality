@@ -10,6 +10,7 @@
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:observation-form": "tsx prisma/scripts/seed-classroom-observation-form.ts",
+    "db:delete-teachers": "tsx prisma/scripts/delete-all-teachers.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {
