@@ -58,6 +58,16 @@ export default function EvaluateForm({
     setScores((s) => ({ ...s, [itemId]: v }));
   }
 
+  function setScoreForItems(itemIds: string[], v: number) {
+    setScores((s) => {
+      const next = { ...s };
+      for (const id of itemIds) next[id] = v;
+      return next;
+    });
+  }
+
+  const allItemIds = domains.flatMap((d) => d.items.map((it) => it.id));
+
   function save(submit: boolean) {
     setError(null);
     setMsg(null);
@@ -101,11 +111,46 @@ export default function EvaluateForm({
           ให้คะแนนแล้ว <span className="font-semibold text-primary">{scoredCount}</span> / {totalItems} รายการ
           {submitted && <span className="ml-2 text-emerald-700">• ส่งผลแล้ว (แก้ไขได้)</span>}
         </p>
+        <div className="flex items-center gap-1.5 mt-3">
+          <span className="text-xs text-text-muted mr-1">ให้คะแนนทั้งฟอร์มระดับเดียวกัน:</span>
+          {SCALE.map(({ v, label }) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setScoreForItems(allItemIds, v)}
+              title={`ตั้งทุกข้อในฟอร์มเป็น ${label}`}
+              className="w-8 h-8 rounded-lg text-xs font-bold border transition-all"
+              style={{ borderColor: SCORE_COLORS[v], color: SCORE_COLORS[v], background: "#fff" }}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
       </div>
 
       {domains.map((d, di) => (
         <div key={d.id} className="bg-surface rounded-xl shadow-sm border border-border overflow-hidden">
-          <div className="domain-header px-4 py-3 font-semibold text-sm">{d.name || `ด้านที่ ${di + 1}`}</div>
+          <div className="domain-header px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="font-semibold text-sm">{d.name || `ด้านที่ ${di + 1}`}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs opacity-70 mr-0.5">ให้คะแนนทั้งด้าน:</span>
+              {SCALE.map(({ v, label }) => {
+                const itemIds = d.items.map((it) => it.id);
+                return (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setScoreForItems(itemIds, v)}
+                    title={`ตั้งทุกข้อในด้านนี้เป็น ${label}`}
+                    className="w-7 h-7 rounded-lg text-xs font-bold border transition-all"
+                    style={{ borderColor: SCORE_COLORS[v], color: SCORE_COLORS[v], background: "#fff" }}
+                  >
+                    {v}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="divide-y divide-dashed divide-border">
             {d.items.map((it, i) => (
               <div key={it.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
