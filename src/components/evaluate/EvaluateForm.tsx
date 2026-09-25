@@ -90,14 +90,26 @@ export default function EvaluateForm({
   }
 
   function upload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const fd = new FormData();
-    fd.set("file", file);
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    setError(null);
     startTransition(async () => {
-      const res = await addEvidence(committeeMemberId, fd);
+      for (const file of files) {
+        const fd = new FormData();
+        fd.set("file", file);
+        const res = await addEvidence(committeeMemberId, fd);
+        if (res && "error" in res && res.error) setError(`${file.name}: ${res.error}`);
+      }
+      router.refresh();
+    });
+  }
+
+  function removeEvidence(ev: Evidence) {
+    if (!confirm(`ลบรูป "${ev.fileName}" ใช่หรือไม่?`)) return;
+    startTransition(async () => {
+      const res = await deleteEvidence(ev.id);
       if (res && "error" in res && res.error) setError(res.error);
-      e.target.value = "";
       router.refresh();
     });
   }
@@ -204,30 +216,38 @@ export default function EvaluateForm({
 
       <div className="bg-surface rounded-xl shadow-sm border border-border p-4">
         <h3 className="font-semibold text-sm mb-3">รูปภาพประกอบการนิเทศ</h3>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {evidence.map((ev) => (
-            <div key={ev.id} className="relative group">
-              <img
-                src={`/api/evidence/${ev.id}`}
-                alt={ev.fileName}
-                className="w-24 h-24 object-cover rounded-lg border border-border"
-              />
-              <button
-                type="button"
-                onClick={() =>
-                  startTransition(async () => {
-                    await deleteEvidence(ev.id);
-                    router.refresh();
-                  })
-                }
-                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-bad text-white text-xs opacity-0 group-hover:opacity-100"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
+        {evidence.length > 0 ? (
+          <div className="flex flex-wrap justify-center gap-4 mb-4">
+            {evidence.map((ev) => (
+              <div key={ev.id} className="flex flex-col items-center gap-2">
+                <img
+                  src={`/api/evidence/${ev.id}`}
+                  alt={ev.fileName}
+                  className="w-40 h-40 object-cover rounded-lg border border-border"
+                />
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => removeEvidence(ev)}
+                  className="rounded-lg border border-bad text-bad px-3 py-1 text-xs font-medium hover:bg-bad hover:text-white transition-colors disabled:opacity-50"
+                >
+                  🗑 ลบรูป
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-xs text-text-muted mb-4">ยังไม่มีรูปภาพ</p>
+        )}
+        <div className="flex justify-center">
+          <label
+            className={`rounded-lg bg-primary text-white px-4 py-2 text-sm font-medium hover:bg-primary-dark transition-colors cursor-pointer ${pending ? "opacity-50 pointer-events-none" : ""}`}
+          >
+            {pending ? "กำลังอัปโหลด..." : "➕ เพิ่มรูปภาพ"}
+            <input type="file" accept="image/*" multiple onChange={upload} className="hidden" />
+          </label>
         </div>
-        <input type="file" accept="image/*" onChange={upload} className="text-sm" />
+        <p className="text-center text-xs text-text-muted mt-2">เลือกได้หลายรูปพร้อมกัน ไฟล์ละไม่เกิน 4MB</p>
       </div>
 
       <div className="bg-surface rounded-xl shadow-sm border border-border p-4">

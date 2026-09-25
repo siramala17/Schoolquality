@@ -170,7 +170,7 @@ export default function SummaryView({
       {evidence.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold mb-2">รูปภาพประกอบการนิเทศ</h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {evidence.map((ev) => (
               <img
                 key={ev.id}
