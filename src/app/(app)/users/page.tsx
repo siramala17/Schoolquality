@@ -11,7 +11,7 @@ export default async function UsersPage() {
 
   const rows = users.map((u) => ({
     id: u.id,
-    email: u.email,
+    email: u.email ?? "",
     name: u.name,
     role: u.role,
     position: u.position ?? "",
@@ -38,7 +38,12 @@ export default async function UsersPage() {
         ]}
         fields={[
           { name: "name", label: "ชื่อ-นามสกุล", required: true },
-          { name: "email", label: "อีเมล", type: "email", required: true },
+          {
+            name: "email",
+            label: "อีเมล (ไม่บังคับ — ต้องมีจึงจะเข้าสู่ระบบได้)",
+            type: "email",
+            placeholder: "เว้นว่างได้",
+          },
           {
             name: "role",
             label: "บทบาท",

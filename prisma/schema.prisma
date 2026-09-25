@@ -121,7 +121,7 @@ model Item {
 
 model User {
   id             String   @id @default(cuid())
-  email          String   @unique
+  email          String?  @unique // ไม่บังคับ — ผู้ใช้ที่ไม่มีอีเมลจะเข้าสู่ระบบไม่ได้ แต่ถูกนิเทศ/เป็นกรรมการได้
   name           String
   role           Role     @default(TEACHER)
   position       String?

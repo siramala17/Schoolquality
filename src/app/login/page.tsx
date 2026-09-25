@@ -10,7 +10,9 @@ const googleEnabled = !!process.env.GOOGLE_CLIENT_ID;
 
 export default async function LoginPage() {
   const devUsers = isDev
-    ? await prisma.user.findMany({ orderBy: [{ role: "asc" }, { name: "asc" }] }).catch(() => [])
+    ? await prisma.user
+        .findMany({ where: { email: { not: null } }, orderBy: [{ role: "asc" }, { name: "asc" }] })
+        .catch(() => [])
     : [];
   const school = await getSchool().catch(() => ({ name: "โรงเรียนเทศบาลวัดกลาง", department: "" }));
 
@@ -53,7 +55,7 @@ export default async function LoginPage() {
                     key={u.id}
                     action={async () => {
                       "use server";
-                      await signIn("dev-login", { email: u.email, name: u.name, redirectTo: "/dashboard" });
+                      await signIn("dev-login", { email: u.email ?? "", name: u.name, redirectTo: "/dashboard" });
                     }}
                   >
                     <button className="w-full text-left rounded-lg border border-border px-3 py-2 text-sm hover:border-primary flex justify-between items-center gap-2">

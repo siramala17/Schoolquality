@@ -10,6 +10,9 @@ const str = (v: unknown) => (v == null ? "" : String(v).trim());
 
 function normalize(d: Data) {
   return {
+    // Email is optional: users without one can be evaluated / sit on committees
+    // but cannot sign in until an admin adds their email.
+    email: str(d.email).toLowerCase() || null,
     name: str(d.name),
     role: (str(d.role) || "TEACHER") as Role,
     position: str(d.position) || null,
@@ -20,11 +23,9 @@ function normalize(d: Data) {
 
 export async function createUser(d: Data) {
   await requireRole(["ADMIN"]);
-  const email = str(d.email).toLowerCase();
-  if (!email) return { error: "กรุณากรอกอีเมล" };
   if (!str(d.name)) return { error: "กรุณากรอกชื่อ-นามสกุล" };
   try {
-    await prisma.user.create({ data: { email, ...normalize(d) } });
+    await prisma.user.create({ data: normalize(d) });
   } catch {
     return { error: "อีเมลนี้มีอยู่แล้ว" };
   }
@@ -33,7 +34,12 @@ export async function createUser(d: Data) {
 
 export async function updateUser(id: string, d: Data) {
   await requireRole(["ADMIN"]);
-  await prisma.user.update({ where: { id }, data: normalize(d) });
+  if (!str(d.name)) return { error: "กรุณากรอกชื่อ-นามสกุล" };
+  try {
+    await prisma.user.update({ where: { id }, data: normalize(d) });
+  } catch {
+    return { error: "อีเมลนี้มีอยู่แล้ว" };
+  }
   revalidatePath("/users");
 }
 
