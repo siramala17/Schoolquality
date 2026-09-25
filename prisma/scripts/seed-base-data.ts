@@ -1,10 +1,13 @@
 // Creates the school's base lookup data on a fresh database: academic years,
-// semesters, rounds, subject groups and classrooms (ม.1–ม.6 × Gifted / MEP / ขอบฟ้ากว้าง).
+// semesters, rounds, subject groups and the real classrooms from the 1/2569 timetable:
+//   ม.1–3: /1–10 ปกติ, /11–12 MEP, /13 Gifted, /14 ขอบฟ้ากว้าง
+//   ม.4–6: /1–8 ปกติ, /9 MEP, /10 Gifted
 // Run against your own DATABASE_URL:
 //   npx tsx prisma/scripts/seed-base-data.ts
 //
-// Safe to re-run: every row is matched by name and only created when missing —
-// it never deletes anything and never creates users.
+// Safe to re-run: every row is matched by name and only created when missing.
+// The only deletion is the unused placeholder rooms (e.g. "ม.1 MEP") from an
+// earlier version of this script. It never creates users.
 
 import { PrismaClient } from "../../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -27,8 +30,20 @@ const SUBJECT_GROUPS = [
   "การงานอาชีพ",
   "ภาษาต่างประเทศ",
 ];
-const TRACKS = ["Gifted", "MEP", "ขอบฟ้ากว้าง"];
-const CLASSROOMS = [1, 2, 3, 4, 5, 6].flatMap((level) => TRACKS.map((track) => `ม.${level} ${track}`));
+const TRACK_BY_ROOM: Record<string, Record<number, string>> = {
+  lower: { 11: "MEP", 12: "MEP", 13: "Gifted", 14: "ขอบฟ้ากว้าง" },
+  upper: { 9: "MEP", 10: "Gifted" },
+};
+const CLASSROOMS = [1, 2, 3, 4, 5, 6].flatMap((level) => {
+  const tracks = level <= 3 ? TRACK_BY_ROOM.lower : TRACK_BY_ROOM.upper;
+  const rooms = level <= 3 ? 14 : 10;
+  return Array.from({ length: rooms }, (_, i) => {
+    const track = tracks[i + 1];
+    return `ม.${level}/${i + 1}${track ? ` (${track})` : ""}`;
+  });
+});
+// Placeholder rooms created by an earlier version of this script; removed if nothing uses them.
+const OBSOLETE_CLASSROOMS = [1, 2, 3, 4, 5, 6].flatMap((l) => ["Gifted", "MEP", "ขอบฟ้ากว้าง"].map((t) => `ม.${l} ${t}`));
 
 // Create each named row that doesn't exist yet; returns how many were added.
 async function ensureNamed(
@@ -69,10 +84,17 @@ async function main() {
   const semesters = await ensureNamed(prisma.semester, SEMESTERS);
   const rounds = await ensureNamed(prisma.round, ROUNDS);
   const subjectGroups = await ensureNamed(prisma.subjectGroup, SUBJECT_GROUPS);
+  const { count: removed } = await prisma.classroom.deleteMany({
+    where: { name: { in: OBSOLETE_CLASSROOMS }, assignments: { none: {} } },
+  });
   const classrooms = await ensureNamed(prisma.classroom, CLASSROOMS);
+  // Keep classroom order consistent with CLASSROOMS even for rows that already existed.
+  for (let i = 0; i < CLASSROOMS.length; i++) {
+    await prisma.classroom.updateMany({ where: { name: CLASSROOMS[i] }, data: { order: i + 1 } });
+  }
 
   console.log(`Done ✓  active year ${ACTIVE_YEAR}; added ${semesters} semesters, ${rounds} rounds,`);
-  console.log(`        ${subjectGroups} subject groups, ${classrooms} classrooms (${CLASSROOMS.length} total defined).`);
+  console.log(`        ${subjectGroups} subject groups, ${classrooms} classrooms (${CLASSROOMS.length} total defined), removed ${removed} placeholder rooms.`);
 }
 
 main()

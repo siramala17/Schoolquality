@@ -12,6 +12,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:observation-form": "tsx prisma/scripts/seed-classroom-observation-form.ts",
     "db:seed:base-data": "tsx prisma/scripts/seed-base-data.ts",
+    "db:import-teachers": "tsx prisma/scripts/import-teachers.ts",
     "db:seed:foreign-language-form": "tsx prisma/scripts/seed-foreign-language-observation-form.ts",
     "db:delete-teachers": "tsx prisma/scripts/delete-all-teachers.ts",
     "db:studio": "prisma studio"
