@@ -1,6 +1,6 @@
 // Imports teachers (no email) from a JSON list produced from the school's
 // "ครูประจำวิชารายห้อง" timetable spreadsheet:
-//   [{ "name": "นางพรสุข พัฒเพ็ง", "sg": "วิทยาศาสตร์และเทคโนโลยี" }, ...]
+//   [{ "name": "นางพรสุข พัฒเพ็ง", "sg": "วิทยาศาสตร์และเทคโนโลยี", "position": null }, ...]
 // `sg` is the subject-group name (or null) and must match a SubjectGroup row.
 //
 //   npx tsx prisma/scripts/import-teachers.ts path/to/teachers.json          (dry run)
@@ -22,7 +22,7 @@ const key = (s: string) => s.replace(/\s+/g, "");
 
 async function main() {
   if (!file) throw new Error("usage: import-teachers.ts <teachers.json> [--yes]");
-  const list: { name: string; sg: string | null }[] = JSON.parse(readFileSync(file, "utf8"));
+  const list: { name: string; sg: string | null; position?: string | null }[] = JSON.parse(readFileSync(file, "utf8"));
 
   const groups = new Map((await prisma.subjectGroup.findMany()).map((g) => [g.name, g.id]));
   const existing = new Set((await prisma.user.findMany({ select: { name: true } })).map((u) => key(u.name)));
@@ -43,6 +43,7 @@ async function main() {
       name: t.name,
       role: "TEACHER" as const,
       subjectGroupId: t.sg ? groups.get(t.sg)! : null,
+      position: t.position ?? null,
     })),
   });
   console.log(`Done ✓  added ${count} teachers.`);

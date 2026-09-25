@@ -18,4 +18,10 @@ export const ASSIGNMENT_STATUS_CLASS: Record<AssignmentStatus, string> = {
   COMPLETED: "bg-emerald-50 text-emerald-700",
 };
 
-export const COMMITTEE_ROLE_OPTIONS = ["ประธานกรรมการ", "กรรมการ", "กรรมการและเลขานุการ"];
+export const COMMITTEE_ROLE_OPTIONS = [
+  "ประธานกรรมการ",
+  "กรรมการ",
+  "กรรมการและเลขานุการ",
+  "ผู้สังเกตชั้นเรียน",
+  "ศึกษานิเทศก์",
+];
