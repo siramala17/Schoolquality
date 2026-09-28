@@ -56,6 +56,10 @@ body {
   body {
     background: #fff;
   }
+  .page-break-after {
+    break-after: page;
+    margin-bottom: 0 !important;
+  }
 }
 
 .print-only {

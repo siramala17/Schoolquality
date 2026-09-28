@@ -4,7 +4,7 @@ import { listAssignments } from "@/lib/data/assignments";
 import { getQualityLevelsForScoring } from "@/lib/data/lookups";
 import { buildSummary } from "@/lib/summary";
 import { round2 } from "@/lib/scoring";
-import { SectionTitle, EmptyState, LevelBadge, StatusPill } from "@/components/ui";
+import { SectionTitle, EmptyState, LevelBadge, StatusPill, GradientButton } from "@/components/ui";
 import { ASSIGNMENT_STATUS_LABELS, ASSIGNMENT_STATUS_CLASS } from "@/lib/labels";
 
 export default async function ResultsPage() {
@@ -30,6 +30,20 @@ export default async function ResultsPage() {
       <SectionTitle icon="📈" count={rows.length}>
         ผลการนิเทศทั้งหมด
       </SectionTitle>
+      {rows.length > 0 && (
+        <div className="flex flex-wrap justify-end gap-2 mb-4">
+          <a
+            href="/api/reports/export"
+            download
+            className="rounded-lg border border-primary text-primary px-4 py-2 text-sm font-semibold hover:bg-primary/5 transition-colors"
+          >
+            ⬇ ดาวน์โหลดทั้งหมด (Excel)
+          </a>
+          <Link href="/reports/print-all" target="_blank">
+            <GradientButton>⬇ ดาวน์โหลดทั้งหมด (PDF)</GradientButton>
+          </Link>
+        </div>
+      )}
       {rows.length === 0 ? (
         <EmptyState>ยังไม่มีข้อมูลการนิเทศ</EmptyState>
       ) : (
@@ -64,9 +78,17 @@ export default async function ResultsPage() {
                     <td className="px-4 py-3">
                       <StatusPill label={ASSIGNMENT_STATUS_LABELS[r.status]} className={ASSIGNMENT_STATUS_CLASS[r.status]} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <Link href={`/summary/${r.id}`} className="text-primary hover:underline">
                         ดูสรุป →
+                      </Link>
+                      <Link
+                        href={`/reports/print/${r.id}`}
+                        target="_blank"
+                        className="ml-3 text-primary hover:underline"
+                        title="ดาวน์โหลดผลการประเมินเป็น PDF"
+                      >
+                        ⬇ PDF
                       </Link>
                     </td>
                   </tr>

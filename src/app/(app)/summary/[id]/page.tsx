@@ -19,7 +19,7 @@ export default async function SummaryDetailPage({ params }: PageProps<"/summary/
           ← กลับ
         </Link>
         <Link href={`/reports/print/${id}`} target="_blank">
-          <GradientButton>🖨 พิมพ์รายงาน</GradientButton>
+          <GradientButton>🖨 พิมพ์ / ดาวน์โหลด PDF</GradientButton>
         </Link>
       </div>
       <h1 className="text-lg font-bold mb-4">สรุปผลการประเมินนิเทศ</h1>
