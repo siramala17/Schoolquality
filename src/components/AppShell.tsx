@@ -25,6 +25,7 @@ const NAV_CONFIG: NavItem[] = [
   { href: "/evaluate", label: "แบบประเมินของฉัน", icon: "✍️", roles: ["ADMIN", "EXECUTIVE", "TEACHER"] },
   { href: "/results", label: "ผลการนิเทศทั้งหมด", icon: "📈", roles: ["ADMIN", "EXECUTIVE"] },
   { href: "/summary", label: "สรุปผลการนิเทศ", icon: "🧾", roles: ["ADMIN", "EXECUTIVE"] },
+  { href: "/supervision-report", label: "รายงานตามกลุ่มสาระ", icon: "🗂️", roles: ["ADMIN", "EXECUTIVE"] },
   { href: "/my-supervision", label: "ผลการนิเทศของฉัน", icon: "🎓", roles: ["TEACHER"] },
 ];
 

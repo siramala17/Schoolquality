@@ -23,8 +23,9 @@ export function getAssignment(id: string) {
   return prisma.assignment.findUnique({ where: { id }, include: fullInclude });
 }
 
-export function listAssignments() {
+export function listAssignments(filters: { roundId?: string; semesterId?: string; yearId?: string } = {}) {
   return prisma.assignment.findMany({
+    where: { roundId: filters.roundId, semesterId: filters.semesterId, academicYearId: filters.yearId },
     include: fullInclude,
     orderBy: [{ academicYear: { year: "desc" } }, { round: { order: "asc" } }, { teacher: { name: "asc" } }],
   });
