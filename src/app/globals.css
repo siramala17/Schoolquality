@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/* TH Sarabun New for the printable Thai official-style reports. Prefer the
+   installed copy; fall back to the bundled one on devices without it. */
+@font-face {
+  font-family: "TH Sarabun New";
+  src: local("TH Sarabun New"), local("THSarabunNew"), url("/fonts/THSarabunNew.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "TH Sarabun New";
+  src: local("TH Sarabun New Bold"), local("THSarabunNew-Bold"), url("/fonts/THSarabunNew-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
 :root {
   --bg: #f1f7f5;
   --surface: #ffffff;
