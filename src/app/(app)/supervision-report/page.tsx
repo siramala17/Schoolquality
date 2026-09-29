@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth-helpers";
+import { REPORT_ROLES } from "@/lib/labels";
 import { filtersFromSearchParams, getSupervisionReport } from "@/lib/data/supervision-report";
 import { SectionTitle, GradientButton } from "@/components/ui";
 import { FilterBar } from "@/components/dashboard/DashboardControls";
@@ -7,7 +8,7 @@ import SupervisionReport from "@/components/reports/SupervisionReport";
 import WordDownloadButton from "@/components/reports/WordDownloadButton";
 
 export default async function SupervisionReportPage({ searchParams }: PageProps<"/supervision-report">) {
-  await requireRole(["ADMIN", "EXECUTIVE"]);
+  await requireRole(REPORT_ROLES);
   const sp = await searchParams;
   const { parts, school, period, options } = await getSupervisionReport(filtersFromSearchParams(sp));
 

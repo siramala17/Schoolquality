@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { REPORT_ROLES } from "@/lib/labels";
 import { listAssignments } from "@/lib/data/assignments";
 import { getQualityLevelsForScoring, getSchool } from "@/lib/data/lookups";
 import PrintReport from "@/components/reports/PrintReport";
@@ -13,7 +14,7 @@ export const metadata: Metadata = { title: "ผลการนิเทศ_ท�
 export default async function PrintAllReportsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN" && session.user.role !== "EXECUTIVE") redirect("/dashboard");
+  if (!REPORT_ROLES.includes(session.user.role)) redirect("/dashboard");
 
   const [assignments, levels, school] = await Promise.all([
     listAssignments(),

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth-helpers";
+import { REPORT_ROLES } from "@/lib/labels";
 import { listAssignments } from "@/lib/data/assignments";
 import { getQualityLevelsForScoring } from "@/lib/data/lookups";
 import { buildSummary } from "@/lib/summary";
@@ -7,7 +8,7 @@ import { round2 } from "@/lib/scoring";
 import { SectionTitle, EmptyState, LevelBadge } from "@/components/ui";
 
 export default async function SummaryListPage() {
-  await requireRole(["ADMIN", "EXECUTIVE"]);
+  await requireRole(REPORT_ROLES);
   const [assignments, levels] = await Promise.all([listAssignments(), getQualityLevelsForScoring()]);
 
   return (

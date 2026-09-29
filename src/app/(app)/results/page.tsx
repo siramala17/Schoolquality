@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth-helpers";
+import { REPORT_ROLES } from "@/lib/labels";
 import { listAssignments } from "@/lib/data/assignments";
 import { getQualityLevelsForScoring } from "@/lib/data/lookups";
 import { buildSummary } from "@/lib/summary";
@@ -8,7 +9,7 @@ import { SectionTitle, EmptyState, LevelBadge, StatusPill, GradientButton } from
 import { ASSIGNMENT_STATUS_LABELS, ASSIGNMENT_STATUS_CLASS } from "@/lib/labels";
 
 export default async function ResultsPage() {
-  await requireRole(["ADMIN", "EXECUTIVE"]);
+  await requireRole(REPORT_ROLES);
   const [assignments, levels] = await Promise.all([listAssignments(), getQualityLevelsForScoring()]);
 
   const rows = assignments.map((a) => {

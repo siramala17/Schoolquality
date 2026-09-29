@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth-helpers";
+import { REPORT_ROLES } from "@/lib/labels";
 import { filtersFromSearchParams } from "@/lib/data/supervision-report";
 import { getLearningRecords } from "@/lib/data/learning-record";
 import { getAcademicYears, getRounds, getSemesters } from "@/lib/data/lookups";
@@ -9,7 +10,7 @@ import LearningRecord from "@/components/reports/LearningRecord";
 import WordDownloadButton from "@/components/reports/WordDownloadButton";
 
 export default async function LearningRecordPage({ searchParams }: PageProps<"/learning-record">) {
-  await requireRole(["ADMIN", "EXECUTIVE"]);
+  await requireRole(REPORT_ROLES);
   const sp = await searchParams;
   const teacherId = typeof sp.teacher === "string" && sp.teacher ? sp.teacher : undefined;
   const [{ records, levels, school, teachers }, rounds, semesters, years] = await Promise.all([

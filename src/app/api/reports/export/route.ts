@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { REPORT_ROLES } from "@/lib/labels";
 import { listAssignments } from "@/lib/data/assignments";
 import { getQualityLevelsForScoring } from "@/lib/data/lookups";
 import { buildSummary } from "@/lib/summary";
@@ -20,7 +21,7 @@ function fmt(n: number | null | undefined) {
 export async function GET() {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  if (session.user.role !== "ADMIN" && session.user.role !== "EXECUTIVE") {
+  if (!REPORT_ROLES.includes(session.user.role)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

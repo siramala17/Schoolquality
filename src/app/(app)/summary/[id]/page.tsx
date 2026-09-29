@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth-helpers";
+import { REPORT_ROLES } from "@/lib/labels";
 import { getAssignment } from "@/lib/data/assignments";
 import { getQualityLevelsForScoring } from "@/lib/data/lookups";
 import { GradientButton } from "@/components/ui";
 import SummaryView from "@/components/summary/SummaryView";
 
 export default async function SummaryDetailPage({ params }: PageProps<"/summary/[id]">) {
-  await requireRole(["ADMIN", "EXECUTIVE"]);
+  await requireRole(REPORT_ROLES);
   const { id } = await params;
   const [assignment, levels] = await Promise.all([getAssignment(id), getQualityLevelsForScoring()]);
   if (!assignment) notFound();

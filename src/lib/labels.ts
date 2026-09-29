@@ -3,8 +3,12 @@ import type { Role, AssignmentStatus } from "@/generated/prisma/enums";
 export const ROLE_LABELS: Record<Role, string> = {
   ADMIN: "ผู้ดูแลระบบ",
   EXECUTIVE: "ผู้บริหาร",
+  SUPERVISOR: "ผู้ดูแล",
   TEACHER: "ครู",
 };
+
+// บทบาทที่ดูผลการนิเทศ/รายงานของครูทุกคนได้ (ผู้ดูแลดูได้อย่างเดียว ไม่มีเมนูจัดการระบบ)
+export const REPORT_ROLES: Role[] = ["ADMIN", "EXECUTIVE", "SUPERVISOR"];
 
 export const ASSIGNMENT_STATUS_LABELS: Record<AssignmentStatus, string> = {
   PENDING: "รอการประเมิน",

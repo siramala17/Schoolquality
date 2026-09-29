@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { REPORT_ROLES } from "@/lib/labels";
 import { filtersFromSearchParams } from "@/lib/data/supervision-report";
 import { getLearningRecords } from "@/lib/data/learning-record";
 import LearningRecord from "@/components/reports/LearningRecord";
@@ -13,7 +14,7 @@ export const metadata: Metadata = { title: "แบบบันทึกการ
 export default async function PrintLearningRecordPage({ searchParams }: PageProps<"/reports/learning-record">) {
   const session = await auth();
   if (!session?.user) redirect("/login");
-  if (session.user.role !== "ADMIN" && session.user.role !== "EXECUTIVE") redirect("/dashboard");
+  if (!REPORT_ROLES.includes(session.user.role)) redirect("/dashboard");
 
   const sp = await searchParams;
   const teacherId = typeof sp.teacher === "string" && sp.teacher ? sp.teacher : undefined;
