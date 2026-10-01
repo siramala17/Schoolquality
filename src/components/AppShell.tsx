@@ -73,7 +73,7 @@ export default function AppShell({
             <div className="text-xs opacity-75 truncate">{user.position || ROLE_LABELS[user.role]}</div>
           </div>
         </div>
-        <nav className="flex-1 flex flex-col gap-0.5 px-2 py-2 overflow-y-auto">
+        <nav className="flex-1 flex flex-col gap-2 px-3 py-3 overflow-y-auto">
           {items.map((n) => {
             const active = pathname === n.href || pathname.startsWith(n.href + "/");
             return (
@@ -81,8 +81,8 @@ export default function AppShell({
                 key={n.href}
                 href={n.href}
                 onClick={() => setOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm ${
-                  active ? "bg-white/20 font-semibold" : "text-white/85 hover:bg-white/10"
+                className={`menu-3d flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm ${
+                  active ? "menu-3d-active font-semibold" : "text-white/90"
                 }`}
               >
                 <span className="w-5 text-center">{n.icon}</span>
@@ -91,9 +91,9 @@ export default function AppShell({
             );
           })}
         </nav>
-        <div className="px-2 py-3 border-t border-white/10">
+        <div className="px-3 py-3 border-t border-white/10">
           <form action={doSignOut}>
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/85 hover:bg-white/10">
+            <button className="menu-3d w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/90">
               <span className="w-5 text-center">🚪</span>
               <span>ออกจากระบบ</span>
             </button>
