@@ -10,7 +10,7 @@ import type { Role } from "@/generated/prisma/enums";
 type NavItem = { href: string; label: string; icon: string; roles: Role[] };
 
 const NAV_CONFIG: NavItem[] = [
-  { href: "/dashboard", label: "แดชบอร์ด", icon: "📊", roles: ["ADMIN", "EXECUTIVE", "SUPERVISOR", "TEACHER"] },
+  { href: "/dashboard", label: "แดชบอร์ด", icon: "📊", roles: ["ADMIN", "EXECUTIVE", "SUPERVISOR", "COMMITTEE", "TEACHER"] },
   { href: "/school", label: "ข้อมูลโรงเรียน", icon: "🏫", roles: ["ADMIN"] },
   { href: "/quality-levels", label: "เกณฑ์ระดับคุณภาพ", icon: "⭐", roles: ["ADMIN"] },
   { href: "/users", label: "จัดการผู้ใช้งาน", icon: "👥", roles: ["ADMIN"] },
@@ -22,7 +22,7 @@ const NAV_CONFIG: NavItem[] = [
   { href: "/assessment-forms", label: "จัดการแบบประเมิน", icon: "📋", roles: ["ADMIN"] },
   { href: "/assignments", label: "มอบหมายชุดประเมิน", icon: "🧩", roles: ["ADMIN"] },
   { href: "/committee", label: "แต่งตั้งกรรมการ", icon: "🧑‍⚖️", roles: ["ADMIN"] },
-  { href: "/evaluate", label: "แบบประเมินของฉัน", icon: "✍️", roles: ["ADMIN", "EXECUTIVE", "SUPERVISOR", "TEACHER"] },
+  { href: "/evaluate", label: "แบบประเมินของฉัน", icon: "✍️", roles: ["ADMIN", "EXECUTIVE", "SUPERVISOR", "COMMITTEE", "TEACHER"] },
   { href: "/results", label: "ผลการนิเทศทั้งหมด", icon: "📈", roles: REPORT_ROLES },
   { href: "/summary", label: "สรุปผลการนิเทศ", icon: "🧾", roles: REPORT_ROLES },
   { href: "/supervision-report", label: "รายงานตามกลุ่มสาระ", icon: "🗂️", roles: REPORT_ROLES },
