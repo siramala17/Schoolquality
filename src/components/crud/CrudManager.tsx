@@ -22,7 +22,9 @@ export type ColumnDef = {
   key: string;
   header: string;
   /** how to render the cell value; defaults to plain text */
-  cell?: "text" | "number2" | "bool" | "level";
+  cell?: "text" | "number2" | "bool" | "level" | "select";
+  /** for cell "select": choices; changing one calls the `onCellChange` prop */
+  options?: { value: string; label: string }[];
   /** value -> label mapping (e.g. role enum -> Thai) */
   map?: Record<string, string>;
   /** render as a link: href = prefix + row[idKey ?? "id"] */
@@ -77,13 +79,16 @@ export default function CrudManager({
   columns,
   fields,
   actions,
-  addLabel = "เพิ่มรายการ",
+  onCellChange,
+  addLabel ="เพิ่มรายการ",
   emptyText = "ยังไม่มีข้อมูล",
 }: {
   rows: Row[];
   columns: ColumnDef[];
   fields: FieldDef[];
   actions: CrudActions;
+  /** save handler for "select" cells edited directly in the table */
+  onCellChange?: (id: string, key: string, value: string) => Promise<ActionResult>;
   addLabel?: string;
   emptyText?: string;
 }) {
@@ -141,6 +146,15 @@ export default function CrudManager({
     });
   }
 
+  function changeCell(row: Row, key: string, value: string) {
+    if (!onCellChange) return;
+    startTransition(async () => {
+      const res = await onCellChange(row.id, key, value);
+      if (res && "error" in res && res.error) alert(res.error);
+      router.refresh();
+    });
+  }
+
   function del(row: Row) {
     if (!confirm("ยืนยันการลบรายการนี้?")) return;
     startTransition(async () => {
@@ -186,7 +200,22 @@ export default function CrudManager({
                   <td className="px-4 py-3 text-text-muted">{i + 1}</td>
                   {columns.map((c) => (
                     <td key={c.key} className={`px-4 py-3 ${c.className ?? ""}`}>
-                      {renderCell(c, row)}
+                      {c.cell === "select" ? (
+                        <select
+                          className={`${inputClass} py-1.5`}
+                          value={String(row[c.key] ?? "")}
+                          disabled={pending}
+                          onChange={(e) => changeCell(row, c.key, e.target.value)}
+                        >
+                          {c.options?.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        renderCell(c, row)
+                      )}
                     </td>
                   ))}
                   <td className="px-4 py-3">

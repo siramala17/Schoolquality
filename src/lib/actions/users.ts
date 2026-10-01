@@ -55,6 +55,15 @@ export async function updateUser(group: UserGroup, id: string, d: Data) {
   revalidatePath("/users");
 }
 
+/** เปลี่ยนบทบาทจาก dropdown ในตารางผู้ใช้งานโดยตรง */
+export async function changeUserRole(id: string, key: string, value: string) {
+  const me = await requireRole(["ADMIN"]);
+  if (key !== "role" || !isRole(value)) return { error: "บทบาทไม่ถูกต้อง" };
+  if (id === me.id && value !== "ADMIN") return { error: "ไม่สามารถเปลี่ยนบทบาทของตนเองได้" };
+  await prisma.user.update({ where: { id }, data: { role: value } });
+  revalidatePath("/users");
+}
+
 export async function deleteUser(id: string) {
   const me = await requireRole(["ADMIN"]);
   if (id === me.id) return { error: "ไม่สามารถลบบัญชีของตนเองได้" };

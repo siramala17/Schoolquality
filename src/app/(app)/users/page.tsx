@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/auth-helpers";
 import { SectionTitle } from "@/components/ui";
 import { ROLE_LABELS, USER_GROUPS, isUserGroup, type UserGroup } from "@/lib/labels";
 import CrudManager, { type ColumnDef, type FieldDef } from "@/components/crud/CrudManager";
-import { createUser, updateUser, deleteUser } from "@/lib/actions/users";
+import { createUser, updateUser, deleteUser, changeUserRole } from "@/lib/actions/users";
 import type { Role } from "@/generated/prisma/enums";
 
 export default async function UsersPage({ searchParams }: PageProps<"/users">) {
@@ -34,10 +34,12 @@ export default async function UsersPage({ searchParams }: PageProps<"/users">) {
       active: u.active,
     }));
 
+  const roleOptions = (Object.keys(ROLE_LABELS) as Role[]).map((r) => ({ value: r, label: ROLE_LABELS[r] }));
+
   const columns: ColumnDef[] = [
     { key: "name", header: "ชื่อ-นามสกุล" },
     { key: "email", header: "อีเมล", className: "text-text-muted" },
-    { key: "role", header: "บทบาท", map: ROLE_LABELS },
+    { key: "role", header: "บทบาท", cell: "select", options: roleOptions },
     { key: "position", header: "ตำแหน่ง" },
     ...(group === "supervisee" ? [{ key: "subjectGroupName", header: "กลุ่มสาระ" }] : []),
     { key: "active", header: "สถานะ", cell: "bool" },
@@ -58,7 +60,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/users">) {
       type: "select",
       required: true,
       defaultValue: roles[0],
-      options: (Object.keys(ROLE_LABELS) as Role[]).map((r) => ({ value: r, label: ROLE_LABELS[r] })),
+      options: roleOptions,
     },
     {
       name: "position",
@@ -115,6 +117,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/users">) {
           update: updateUser.bind(null, group),
           remove: deleteUser,
         }}
+        onCellChange={changeUserRole}
       />
     </div>
   );
