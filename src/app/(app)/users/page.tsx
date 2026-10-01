@@ -5,6 +5,7 @@ import { SectionTitle } from "@/components/ui";
 import { ROLE_LABELS, USER_GROUPS, isUserGroup, type UserGroup } from "@/lib/labels";
 import CrudManager, { type ColumnDef, type FieldDef } from "@/components/crud/CrudManager";
 import { createUser, updateUser, deleteUser } from "@/lib/actions/users";
+import type { Role } from "@/generated/prisma/enums";
 
 export default async function UsersPage({ searchParams }: PageProps<"/users">) {
   await requireRole(["ADMIN"]);
@@ -36,7 +37,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/users">) {
   const columns: ColumnDef[] = [
     { key: "name", header: "ชื่อ-นามสกุล" },
     { key: "email", header: "อีเมล", className: "text-text-muted" },
-    ...(roles.length > 1 ? [{ key: "role", header: "บทบาท", map: ROLE_LABELS }] : []),
+    { key: "role", header: "บทบาท", map: ROLE_LABELS },
     { key: "position", header: "ตำแหน่ง" },
     ...(group === "supervisee" ? [{ key: "subjectGroupName", header: "กลุ่มสาระ" }] : []),
     { key: "active", header: "สถานะ", cell: "bool" },
@@ -50,17 +51,15 @@ export default async function UsersPage({ searchParams }: PageProps<"/users">) {
       type: "email",
       placeholder: "เว้นว่างได้",
     },
-    ...(roles.length > 1
-      ? [
-          {
-            name: "role",
-            label: "บทบาท",
-            type: "select" as const,
-            required: true,
-            options: roles.map((r) => ({ value: r, label: ROLE_LABELS[r] })),
-          },
-        ]
-      : []),
+    {
+      // เปลี่ยนบทบาทได้ทุกแท็บ — เมื่อบันทึก ผู้ใช้จะย้ายไปอยู่ในแท็บของบทบาทใหม่
+      name: "role",
+      label: "บทบาท",
+      type: "select",
+      required: true,
+      defaultValue: roles[0],
+      options: (Object.keys(ROLE_LABELS) as Role[]).map((r) => ({ value: r, label: ROLE_LABELS[r] })),
+    },
     {
       name: "position",
       label: "ตำแหน่ง",

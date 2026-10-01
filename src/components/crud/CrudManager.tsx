@@ -14,6 +14,8 @@ export type FieldDef = {
   step?: string;
   placeholder?: string;
   colSpan?: 1 | 2;
+  /** initial value when creating a new row */
+  defaultValue?: string;
 };
 
 export type ColumnDef = {
@@ -96,7 +98,7 @@ export default function CrudManager({
     setEditing(null);
     setForm(
       Object.fromEntries(
-        fields.map((f) => [f.name, f.type === "checkbox" ? true : ""]),
+        fields.map((f) => [f.name, f.type === "checkbox" ? true : (f.defaultValue ?? "")]),
       ),
     );
     setError(null);
